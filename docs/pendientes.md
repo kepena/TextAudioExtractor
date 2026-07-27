@@ -36,8 +36,13 @@ léela primero.**
   GUI**: (b) sin subs → Whisper (video local servido por HTTP en localhost, para
   evitar el bloqueo de YouTube) y (a) subs del creador → sin Whisper (TED talk,
   .srt/.txt derivados de la pista de subs, sin transcribir). También verificada la
-  ruta de error de la GUI: diálogo claro y clasificado, sin crash. Sigue pendiente
-  el **caso 4 (playlist real)**: hoy YouTube bloquea esta máquina (ver P8).
+  ruta de error de la GUI: diálogo claro y clasificado, sin crash.
+  **Caso 4 cerrado (2026-07-27):** corrida real de `run_playlist` sobre una
+  playlist de YouTube (acotada a 3 ítems: 2 válidos + 1 `[Deleted video]`). El
+  `BatchReport` dio 2 éxitos (con nombres `NN_`) + 1 fallo clasificado como
+  `unavailable`, sin abortar el lote. Esa corrida destapó el bug del `live_chat`
+  (ver P9). Nota: el "bloqueo de YouTube" resultó **intermitente** (anti-bot), no
+  duro; con reintento funciona.
 - **P6** ✅ Logo real colocado (2026-07-27) en `src/tae/gui/assets/kaiketek-logo.png`
   (256×256, fondo transparente, 43 KB). Origen: `LogoKaiketekTransparente.png` del
   repositorio de Marca (el árbol solo, sin wordmark), auto-recortado al contenido
@@ -61,3 +66,13 @@ léela primero.**
   error avise correctamente. Decidir si se agrega soporte `--cookies-from-browser`
   (y/o instalar `deno`) para el módulo online. Es bloqueo externo + brecha de
   robustez, no un bug del código.
+- **P9** ✅ Bug del `live_chat.json` encontrado y corregido (2026-07-27) durante el
+  caso 4. En videos que fueron premiere/directo, yt-dlp deja un `id.live_chat.json`
+  (chat en vivo) como sidecar: (1) `_choose_subtitle` lo elegía vía
+  `next(iter(manual))` y yt-dlp lo descargaba, y (2) `_locate_audio` solo excluía
+  `.vtt/.srt`, así que tomaba el `.live_chat.json` como audio → ffmpeg reventaba
+  ("Invalid data found"). Fix en `src/tae/online/download.py`: ignorar el
+  pseudo-idioma `live_chat` al elegir subtítulo, y en `_locate_audio` excluir todos
+  los sidecars (json/miniaturas/…) y quedarse con el archivo más grande (el medio
+  real pesa MB). Verificado en vivo: "Hensonn-Sahara" (que fallaba) ahora genera su
+  mp3. `pytest` 60/60 (+3 tests), `ruff` limpio.

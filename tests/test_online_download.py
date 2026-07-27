@@ -116,6 +116,41 @@ def test_download_sin_subs(monkeypatch, tmp_path):
     assert res.subtitle_path is None
 
 
+def test_choose_ignora_live_chat():
+    # Premiere/directo: su unica "pista" es el chat en vivo (no es texto util).
+    meta = {"subtitles": {"live_chat": [{}]}, "automatic_captions": {}, "language": "en"}
+    lang, is_auto = _choose_subtitle(meta, requested_lang=None, allow_auto_subs=True)
+    assert lang is None and is_auto is False
+
+
+def test_choose_salta_live_chat_y_toma_subtitulo_real():
+    meta = {
+        "subtitles": {"live_chat": [{}], "en": [{}]},
+        "automatic_captions": {},
+        "language": "en",
+    }
+    lang, is_auto = _choose_subtitle(meta, requested_lang=None, allow_auto_subs=False)
+    assert lang == "en" and is_auto is False
+
+
+def test_download_no_toma_live_chat_json_como_audio(monkeypatch, tmp_path):
+    # Regresion: yt-dlp deja `id.live_chat.json` junto al audio; no debe elegirse
+    # como pista de audio (ffmpeg no puede con un JSON).
+    meta = _meta_json(subtitles={"live_chat": [{"ext": "json"}]})
+
+    def fake_run(cmd, *, capture=True):
+        if "--dump-json" in cmd:
+            return _cp(stdout=meta)
+        (tmp_path / "abc123.live_chat.json").write_text("[]", encoding="utf-8")
+        (tmp_path / "abc123.webm").write_bytes(b"audio-real-mucho-mas-grande" * 20)
+        return _cp()
+
+    monkeypatch.setattr(dl_mod, "run", fake_run)
+    res = download("http://x", tmp_path)
+    assert res.audio_path.name == "abc123.webm"
+    assert res.subtitle_path is None
+
+
 def test_download_falla_privado_se_traduce(monkeypatch, tmp_path):
     def fake_run(cmd, *, capture=True):
         return _cp(returncode=1, stderr="ERROR: Private video")

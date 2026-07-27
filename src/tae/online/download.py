@@ -14,9 +14,20 @@ from .errors import DownloadFailed, FailureCause, message_for
 from .models import DownloadResult, PlaylistEntry, UrlInfo
 from .ytdlp_utils import ensure_ytdlp, run
 
-# Extensiones que yt-dlp deja como pista de audio (todo lo demas en el work_dir
-# que no sea subtitulo).
-_SUBTITLE_EXTS = {".vtt", ".srt"}
+# Sidecars que yt-dlp puede dejar en el work_dir junto al audio y que NO son la
+# pista de audio: subtitulos, miniaturas, y JSON (incluye `.info.json` y el
+# `.live_chat.json` del chat en vivo de premieres/directos). `Path.suffix` de
+# `id.live_chat.json` es `.json`, asi que este set lo cubre.
+_NON_MEDIA_EXTS = {
+    ".vtt", ".srt", ".ass", ".ssa", ".lrc",  # subtitulos
+    ".json",                                  # .info.json, .live_chat.json
+    ".jpg", ".jpeg", ".png", ".webp",         # miniaturas
+    ".description", ".txt", ".url", ".nfo",   # otros sidecars
+}
+
+# Pseudo-"idiomas" de subtitulo que no son texto transcribible (el chat en vivo
+# se entrega como live_chat.json). Nunca deben elegirse como pista de subtitulos.
+_IGNORED_SUB_LANGS = {"live_chat"}
 
 
 def probe_url(url: str) -> UrlInfo:
@@ -182,8 +193,14 @@ def _choose_subtitle(
     (solo si `allow_auto_subs`). Devuelve (lang, is_auto) o (None, False) si no
     hay subtitulo utilizable y habra que transcribir.
     """
-    manual = meta.get("subtitles") or {}
-    auto = meta.get("automatic_captions") or {}
+    manual = {
+        k: v for k, v in (meta.get("subtitles") or {}).items()
+        if k not in _IGNORED_SUB_LANGS
+    }
+    auto = {
+        k: v for k, v in (meta.get("automatic_captions") or {}).items()
+        if k not in _IGNORED_SUB_LANGS
+    }
     original = meta.get("language")
 
     # Orden de preferencia de idiomas a intentar.
@@ -230,11 +247,20 @@ def _resolve_lang(subs: dict, lang: str) -> str | None:
 
 
 def _locate_audio(work_dir: Path, video_id: str) -> Path | None:
-    """Encuentra el archivo de audio descargado (todo lo que no sea subtitulo)."""
-    for path in sorted(work_dir.glob(f"{video_id}.*")):
-        if path.suffix.lower() not in _SUBTITLE_EXTS:
-            return path
-    return None
+    """Encuentra el archivo de audio descargado, ignorando los sidecars.
+
+    yt-dlp deja junto al audio subtitulos, miniaturas y JSON (`.info.json`,
+    `.live_chat.json`). Se descartan por extension y, como red de seguridad, se
+    elige el archivo mas grande: el medio real pesa MB y los sidecars KB.
+    """
+    candidates = [
+        path
+        for path in work_dir.glob(f"{video_id}.*")
+        if path.is_file() and path.suffix.lower() not in _NON_MEDIA_EXTS
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_size)
 
 
 def _locate_subtitle(work_dir: Path, video_id: str) -> Path | None:
