@@ -1,0 +1,39 @@
+# Secretos — nunca versionar
+.env
+.env.*
+*token*.json
+client_secret*.json
+service_account*.json
+
+# Entorno Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Config local de la máquina (no se versiona)
+.claude/settings.local.json
+
+# Salidas de la app / media de prueba
+/output/
+*.srt
+*.vtt
+*.wav
+*.mp3
+*.mp4
+*.mkv
+*.webm
+
+# Modelos de Whisper descargados
+*.pt
+models/
+
+# SO / editores
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
