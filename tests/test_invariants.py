@@ -35,3 +35,24 @@ def test_invariant3_detect_device_no_crashea():
     device, compute = detect_device()
     assert device in ("cuda", "cpu")
     assert compute in ("float16", "int8")
+
+
+def test_invariant4_core_no_importa_online():
+    """Importar el core no debe arrastrar el modulo online (capa aislada, invariante 4)."""
+    code = (
+        "import sys; import tae.core.pipeline;"
+        "assert not any(m.startswith('tae.online') for m in sys.modules), "
+        "'core importo tae.online';"
+        "print('ok')"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_core_subtitles_sigue_exportando_api_previa():
+    """parse_srt y extract_subtitles siguen existiendo tras agregar parse_vtt (E3)."""
+    from tae.core import subtitles
+
+    assert hasattr(subtitles, "parse_srt")
+    assert hasattr(subtitles, "extract_subtitles")
+    assert hasattr(subtitles, "parse_vtt")  # el aditivo de esta fase

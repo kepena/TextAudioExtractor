@@ -6,6 +6,7 @@ parsea a la misma estructura Segment que usa la transcripcion.
 
 from __future__ import annotations
 
+import html
 import re
 import tempfile
 from pathlib import Path
@@ -18,6 +19,9 @@ _TIME_RE = re.compile(
     r"(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})\s*-->\s*"
     r"(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})"
 )
+
+# Tags inline de WebVTT: <c>, </c>, <c.colorCCCCCC>, <00:00:01.000>, <v Autor>...
+_VTT_TAG_RE = re.compile(r"</?[^>]+>")
 
 
 def extract_subtitles(video: Path, track_index: int = 0) -> list[Segment]:
@@ -71,6 +75,43 @@ def parse_srt(content: str) -> list[Segment]:
         if text:
             segments.append(Segment(start=start, end=end, text=text))
     return segments
+
+
+def parse_vtt(content: str) -> list[Segment]:
+    """Parsea texto en formato WebVTT a Segment[]. Tolerante y aditivo al SRT.
+
+    WebVTT es casi SRT pero con cabecera `WEBVTT`, milisegundos con `.`, posibles
+    *cue settings* tras el timestamp (`align:start position:0%`) y tags inline
+    (`<c>`, `<00:00:01.000>`). Los bloques que no son cues (header, `NOTE`,
+    `STYLE`, `REGION`) no traen linea de tiempo y se ignoran solos. Reutiliza
+    `_to_seconds` y `_find_time_line`, igual que `parse_srt`.
+    """
+    segments: list[Segment] = []
+    blocks = re.split(r"\r?\n\r?\n+", content.strip())
+    for block in blocks:
+        lines = [ln for ln in block.splitlines() if ln.strip() != ""]
+        if not lines:
+            continue
+        time_line_idx = _find_time_line(lines)
+        if time_line_idx is None:
+            continue  # header WEBVTT, NOTE, STYLE, REGION: sin timestamp
+        m = _TIME_RE.search(lines[time_line_idx])
+        if not m:
+            continue
+        start = _to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
+        end = _to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
+        raw = " ".join(lines[time_line_idx + 1 :])
+        text = _clean_vtt_text(raw)
+        if text:
+            segments.append(Segment(start=start, end=end, text=text))
+    return segments
+
+
+def _clean_vtt_text(raw: str) -> str:
+    """Quita tags inline de WebVTT, decodifica entidades HTML y colapsa espacios."""
+    text = _VTT_TAG_RE.sub("", raw)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _find_time_line(lines: list[str]) -> int | None:

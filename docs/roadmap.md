@@ -1,7 +1,7 @@
 # Roadmap — TextAudioExtractor
 
 Creado: 2026-07-26
-Actualizado: 2026-07-26
+Actualizado: 2026-07-26 (Fase 4 implementada)
 
 ## Visión
 
@@ -17,7 +17,9 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
 - **Fase 2 — Motor (core)** Detección de subtítulos, extracción de audio,
   transcripción local, salidas (texto plano, `.srt`, audio). Probado como CLI.
 - **Fase 3 — GUI delgada** Arrastrar video → elegir salidas → progreso.
-- **Fase 4 — Módulo online (opcional)** YouTube/plataformas vía `yt-dlp`.
+- **Fase 4 — Módulo online** ✅ YouTube/plataformas vía `yt-dlp`. Paquete aislado
+  `src/tae/online/`, subcomandos `tae local`/`tae url`, playlists en lote, GUI con
+  campo URL. Ver P5 en `docs/pendientes.md`.
 
 ## Decisiones tomadas (brainstorm 2026-07-26)
 
