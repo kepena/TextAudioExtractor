@@ -16,4 +16,9 @@ léela primero.**
   (RTX 4050, CUDA/float16). Ver `docs/plans/2026-07-26-extractor-texto-audio-mvp.md`.
 - **P4** ⏳ Probar la GUI (`uv run tae-gui`) con un video real de voz y validar el
   flujo visual completo (arrastrar → salidas → carpeta → progreso → abrir carpeta).
+  UI ya rebrandeada a Kaiketek (tema claro, colores, Montserrat/Poppins empaquetadas,
+  ícono de app, footer "Powered by"); falta la corrida real con voz.
 - **P5** ⏳ (Fase posterior) Módulo YouTube/online con `yt-dlp`.
+- **P6** ⏳ Kike debe colocar el logo real en
+  `src/tae/gui/assets/kaiketek-logo.png` (PNG con transparencia). El código ya lo
+  detecta solo; mientras tanto usa `tree.svg` de respaldo.

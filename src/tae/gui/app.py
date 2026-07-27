@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -49,6 +49,142 @@ LANGUAGES = [
     ("Italiano (it)", "it"),
 ]
 
+# --- Marca Kaiketek ---
+AZUL_TEK = "#0071ed"
+AZUL_KAI = "#0573c0"
+VERDE_TEK = "#6ad60a"
+VERDE_KAI = "#03905d"
+TURQUESA = "#5fd3c8"
+GRIS_TEXTO = "#333333"
+BLANCO = "#ffffff"
+GRIS_CLARO = "#f4f6f8"
+GRIS_BORDE = "#e2e6ea"
+
+# Wordmark tricolor KAI/KE/TEK (solo sobre fondo claro, regla obligatoria de marca).
+WORDMARK = (
+    f'<span style="color:{AZUL_TEK};font-weight:800;letter-spacing:1px;">KAI</span>'
+    f'<span style="color:{TURQUESA};font-weight:800;letter-spacing:1px;">KE</span>'
+    f'<span style="color:{VERDE_TEK};font-weight:800;letter-spacing:1px;">TEK</span>'
+)
+
+# Carpeta de assets (svg) en formato posix para las url() del QSS.
+ASSETS = (Path(__file__).parent / "assets").as_posix()
+
+
+def _find_logo() -> str:
+    """Ruta del logo real de Kaiketek si esta puesto; si no, el arbolito de respaldo."""
+    base = Path(__file__).parent / "assets"
+    for name in ("kaiketek-logo.png", "kaiketek-logo.svg", "tree.svg"):
+        if (base / name).exists():
+            return (base / name).as_posix()
+    return (base / "tree.svg").as_posix()
+
+
+LOGO = _find_logo()
+
+STYLE = f"""
+QWidget {{
+    background: {BLANCO};
+    color: {GRIS_TEXTO};
+    font-family: "Poppins", "Segoe UI", sans-serif;
+    font-size: 10.5pt;
+}}
+QLabel {{ background: transparent; }}
+QLabel#wordmarkFooter {{
+    font-family: "Montserrat", "Segoe UI", sans-serif;
+    font-size: 9pt;
+}}
+QLabel#poweredBy {{
+    color: #9aa4ad;
+    font-size: 8.5pt;
+}}
+QLabel#apptitle {{
+    font-family: "Montserrat", "Segoe UI", sans-serif;
+    font-size: 25pt;
+    font-weight: 800;
+    color: {GRIS_TEXTO};
+}}
+QLabel#subheader {{
+    color: {AZUL_KAI};
+    font-size: 10pt;
+}}
+QGroupBox {{
+    border: 1px solid {GRIS_BORDE};
+    border-radius: 12px;
+    margin-top: 14px;
+    padding: 14px 12px 12px 12px;
+    background: {GRIS_CLARO};
+}}
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 6px;
+    color: {AZUL_TEK};
+    font-family: "Montserrat", "Segoe UI", sans-serif;
+    font-weight: 700;
+}}
+QPushButton {{
+    font-family: "Montserrat", "Segoe UI", sans-serif;
+    font-weight: 700;
+    background: {BLANCO};
+    color: {AZUL_TEK};
+    border: 1.5px solid {AZUL_TEK};
+    border-radius: 8px;
+    padding: 7px 16px;
+}}
+QPushButton:hover {{ background: #eaf3fe; }}
+QPushButton:disabled {{ color: #a9b2ba; border-color: {GRIS_BORDE}; background: {GRIS_CLARO}; }}
+QPushButton#primary {{
+    background: {AZUL_TEK};
+    color: {BLANCO};
+    border: none;
+    padding: 9px 22px;
+}}
+QPushButton#primary:hover {{ background: {AZUL_KAI}; }}
+QPushButton#primary:disabled {{ background: #b6d4f5; color: {BLANCO}; }}
+QLineEdit, QComboBox {{
+    background: {BLANCO};
+    border: 1.5px solid #cdd4da;
+    border-radius: 8px;
+    padding: 7px 10px;
+}}
+QComboBox:hover, QLineEdit:hover {{ border-color: {TURQUESA}; }}
+QLineEdit:focus, QComboBox:focus {{ border: 1.5px solid {AZUL_TEK}; }}
+QComboBox::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 26px;
+    border-left: 1px solid #e4e8ec;
+}}
+QComboBox::down-arrow {{ image: url({ASSETS}/chevron.svg); width: 12px; height: 12px; }}
+QCheckBox {{ spacing: 9px; background: transparent; }}
+QCheckBox::indicator {{
+    width: 20px; height: 20px;
+    border: 1.5px solid #cdd4da;
+    border-radius: 6px;
+    background: {BLANCO};
+}}
+QCheckBox::indicator:hover {{ border-color: {TURQUESA}; }}
+QCheckBox::indicator:checked {{
+    border: 1.5px solid {VERDE_KAI};
+    background: #eefbe3;
+    image: url({ASSETS}/check.svg);
+}}
+QProgressBar {{
+    border: 1px solid {GRIS_BORDE};
+    border-radius: 8px;
+    background: {GRIS_CLARO};
+    height: 20px;
+    text-align: center;
+    color: {GRIS_TEXTO};
+}}
+QProgressBar::chunk {{
+    border-radius: 7px;
+    background: {VERDE_TEK};
+}}
+"""
+
 
 class DropFrame(QFrame):
     """Zona para arrastrar un video."""
@@ -60,7 +196,8 @@ class DropFrame(QFrame):
         self.setFrameShape(QFrame.StyledPanel)
         self.setMinimumHeight(90)
         self.setStyleSheet(
-            "DropFrame { border: 2px dashed #888; border-radius: 8px; }"
+            f"DropFrame {{ border: 2px dashed {TURQUESA}; border-radius: 12px; "
+            f"background: {GRIS_CLARO}; }}"
         )
         layout = QVBoxLayout(self)
         self.label = QLabel("Arrastra un video aqui  ·  o usa 'Elegir archivo'")
@@ -84,6 +221,7 @@ class MainWindow(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("TextAudioExtractor")
+        self.setWindowIcon(QIcon(LOGO))
         self.setMinimumWidth(560)
 
         self._video: Path | None = None
@@ -97,6 +235,25 @@ class MainWindow(QWidget):
     # ---------- UI ----------
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
+        root.setContentsMargins(24, 20, 24, 20)
+        root.setSpacing(12)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(12)
+        self.icon_label = QLabel()
+        self.icon_label.setPixmap(QIcon(f"{ASSETS}/appicon.svg").pixmap(44, 44))
+        title_row.addWidget(self.icon_label)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(0)
+        title = QLabel("Text/Audio Extractor")
+        title.setObjectName("apptitle")
+        title_col.addWidget(title)
+        subheader = QLabel("Extrae el texto y el audio de tus videos")
+        subheader.setObjectName("subheader")
+        title_col.addWidget(subheader)
+        title_row.addLayout(title_col)
+        title_row.addStretch()
+        root.addLayout(title_row)
 
         self.drop = DropFrame(self._load_video)
         root.addWidget(self.drop)
@@ -164,6 +321,7 @@ class MainWindow(QWidget):
         # Acciones
         actions = QHBoxLayout()
         self.start_btn = QPushButton("Iniciar")
+        self.start_btn.setObjectName("primary")
         self.start_btn.clicked.connect(self._start)
         self.start_btn.setEnabled(False)
         self.cancel_btn = QPushButton("Cancelar")
@@ -177,6 +335,24 @@ class MainWindow(QWidget):
         actions.addStretch()
         actions.addWidget(self.open_btn)
         root.addLayout(actions)
+
+        # Footer "Powered by" — arbolito + KAIKETEK pequeño (marca en segundo plano)
+        footer = QHBoxLayout()
+        footer.setSpacing(6)
+        footer.addStretch()
+        powered = QLabel("Powered by")
+        powered.setObjectName("poweredBy")
+        footer.addWidget(powered)
+        tree_lbl = QLabel()
+        tree_lbl.setPixmap(QIcon(LOGO).pixmap(20, 20))
+        footer.addWidget(tree_lbl)
+        km = QLabel(WORDMARK)
+        km.setObjectName("wordmarkFooter")
+        km.setTextFormat(Qt.RichText)
+        footer.addWidget(km)
+        footer.addStretch()
+        root.addSpacing(4)
+        root.addLayout(footer)
 
     def _check_ffmpeg(self) -> None:
         if find_ffmpeg() is None:
@@ -321,10 +497,26 @@ class MainWindow(QWidget):
             subprocess.run(["xdg-open", path], check=False)
 
 
+def _load_brand_fonts() -> None:
+    """Registra Montserrat y Poppins empaquetadas, sin depender de que esten en el SO."""
+    fonts_dir = Path(__file__).parent / "fonts"
+    for ttf in ("Montserrat-VF.ttf", "Poppins-Light.ttf", "Poppins-Regular.ttf"):
+        path = fonts_dir / ttf
+        if path.exists():
+            QFontDatabase.addApplicationFont(str(path))
+
+
 def main() -> int:
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")  # base neutral para que el QSS mande, sin tema oscuro del SO
+    _load_brand_fonts()
+    app.setWindowIcon(QIcon(LOGO))
+    app.setFont(QFont("Poppins", 10))
+    app.setStyleSheet(STYLE)
     window = MainWindow()
     window.show()
+    window.raise_()
+    window.activateWindow()
     return app.exec()
 
 

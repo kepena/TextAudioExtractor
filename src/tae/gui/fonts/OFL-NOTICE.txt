@@ -1,0 +1,10 @@
+Fuentes empaquetadas bajo la SIL Open Font License 1.1 (OFL):
+
+- Montserrat — (c) The Montserrat Project Authors
+  https://fonts.google.com/specimen/Montserrat
+- Poppins — (c) Indian Type Foundry, Jonny Pinhorn
+  https://fonts.google.com/specimen/Poppins
+
+La OFL permite usar, empaquetar y redistribuir estas fuentes de forma gratuita,
+incluso dentro de software. Texto completo de la licencia:
+https://openfontlicense.org
