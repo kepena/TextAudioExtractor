@@ -74,6 +74,7 @@ def run_url(
             lang=opts.language,
             allow_auto_subs=opts.allow_auto_subs,
             keep_video=opts.keep_video,
+            cookies=opts.cookies,
         )
         check_cancel()
 
@@ -134,7 +135,7 @@ def run_playlist(
         if on_info:
             on_info(msg)
 
-    url_info = probe_url(opts.url)
+    url_info = probe_url(opts.url, cookies=opts.cookies)
     entries = url_info.entries
     report = BatchReport(playlist_title=url_info.playlist_title)
 
@@ -167,6 +168,7 @@ def run_playlist(
             audio_format=opts.audio_format,
             allow_auto_subs=opts.allow_auto_subs,
             keep_video=opts.keep_video,
+            cookies=opts.cookies,
         )
         try:
             res = run_url(

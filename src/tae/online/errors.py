@@ -38,12 +38,14 @@ CAUSE_MESSAGES: dict[FailureCause, str] = {
         "El video ya no existe o fue borrado por el creador o la plataforma."
     ),
     FailureCause.NEEDS_LOGIN: (
-        "El video requiere iniciar sesion o confirmar edad. Exporta las cookies de "
-        "tu navegador para yt-dlp si necesitas acceder a el."
+        "El video requiere iniciar sesion, confirmar edad o pasar la verificacion "
+        "anti-bot. Indica cookies en el campo 'Cookies' (nombre de tu navegador con "
+        "sesion en YouTube, ej. firefox, o la ruta a un cookies.txt) y reintenta."
     ),
     FailureCause.EXTRACTOR_ERROR: (
-        "yt-dlp no pudo procesar esta URL: probablemente la plataforma cambio y tu "
-        "yt-dlp esta desactualizado. Actualizalo con `pip install -U yt-dlp`."
+        "yt-dlp no pudo procesar esta URL. Suele ser por yt-dlp desactualizado "
+        "(actualizalo con `pip install -U yt-dlp`) o, en YouTube, por falta de un "
+        "runtime de JavaScript (instala deno: `winget install DenoLand.Deno`)."
     ),
     FailureCause.NETWORK: (
         "Fallo la conexion de red al intentar descargar. Revisa tu internet e "

@@ -131,13 +131,18 @@ def url(
     keep_video: bool = typer.Option(
         False, "--keep-video", help="Conservar la fuente descargada junto a las salidas."
     ),
+    cookies: str | None = typer.Option(
+        None, "--cookies",
+        help="Cookies para login/anti-bot (YouTube): nombre de navegador con sesion "
+        "(firefox, chrome, edge) o ruta a un cookies.txt.",
+    ),
 ) -> None:
     """Descarga una URL (video o playlist) y escribe las salidas pedidas."""
     # Import diferido: el modulo online no debe cargarse en el flujo local.
     from .online.download import probe_url
     from .online.models import OnlineJobOptions
     from .online.runner import run_playlist, run_url, summarize_batch
-    from .online.ytdlp_utils import ensure_ytdlp
+    from .online.ytdlp_utils import JS_RUNTIME_HINT, ensure_ytdlp, find_js_runtime
 
     if not (txt or srt or audio):
         typer.secho("No pediste ninguna salida (--txt/--srt/--audio).", fg=typer.colors.RED)
@@ -155,10 +160,13 @@ def url(
         audio_format=audio_format,
         allow_auto_subs=allow_auto_subs,
         keep_video=keep_video,
+        cookies=cookies,
     )
 
     try:
         ensure_ytdlp()
+        if find_js_runtime() is None:
+            _on_info(JS_RUNTIME_HINT)
         _on_stage("Inspeccionando la URL...")
         info = probe_url(link)
         if info.is_playlist:

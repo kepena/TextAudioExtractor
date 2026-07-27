@@ -288,6 +288,21 @@ class MainWindow(QWidget):
         url_opts.addWidget(self.cb_keep)
         url_opts.addStretch()
         url_layout.addLayout(url_opts)
+        cookies_row = QHBoxLayout()
+        cookies_lbl = QLabel("Cookies (login/anti-bot):")
+        self.cookies_edit = QLineEdit()
+        self.cookies_edit.setPlaceholderText(
+            "firefox / chrome / edge  ·  o ruta a un cookies.txt  ·  opcional"
+        )
+        self.cookies_edit.setToolTip(
+            "Para videos que piden iniciar sesion o verificar que no eres un bot.\n"
+            "Escribe el navegador donde tienes sesion en YouTube (ej. firefox), o la "
+            "ruta a un archivo cookies.txt exportado. En Windows, Firefox es el mas "
+            "fiable (Chrome/Edge cifran las cookies)."
+        )
+        cookies_row.addWidget(cookies_lbl)
+        cookies_row.addWidget(self.cookies_edit)
+        url_layout.addLayout(cookies_row)
         root.addWidget(url_box)
 
         # Salidas
@@ -502,6 +517,7 @@ class MainWindow(QWidget):
             model=self.cmb_model.currentText(),
             allow_auto_subs=self.cb_auto_subs.isChecked(),
             keep_video=self.cb_keep.isChecked(),
+            cookies=self.cookies_edit.text().strip() or None,
         )
         self._last_out_dir = out_dir
 
@@ -531,6 +547,7 @@ class MainWindow(QWidget):
         self.pick_btn.setEnabled(not running)
         self.out_btn.setEnabled(not running)
         self.url_edit.setEnabled(not running)
+        self.cookies_edit.setEnabled(not running)
 
     # ---------- Señales del worker ----------
     def _on_stage(self, msg: str) -> None:

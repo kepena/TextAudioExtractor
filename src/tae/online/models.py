@@ -35,6 +35,7 @@ class OnlineJobOptions:
     audio_format: str = "mp3"         # formato del audio entregado al usuario
     allow_auto_subs: bool = False     # aceptar subtitulos auto-generados (ASR)
     keep_video: bool = False          # conservar los temporales descargados
+    cookies: str | None = None        # navegador (firefox/chrome/...) o ruta a cookies.txt (P8)
 
     @property
     def wants_text(self) -> bool:

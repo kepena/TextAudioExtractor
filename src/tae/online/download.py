@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .errors import DownloadFailed, FailureCause, message_for
 from .models import DownloadResult, PlaylistEntry, UrlInfo
-from .ytdlp_utils import ensure_ytdlp, run
+from .ytdlp_utils import cookie_args, ensure_ytdlp, run
 
 # Sidecars que yt-dlp puede dejar en el work_dir junto al audio y que NO son la
 # pista de audio: subtitulos, miniaturas, y JSON (incluye `.info.json` y el
@@ -30,16 +30,18 @@ _NON_MEDIA_EXTS = {
 _IGNORED_SUB_LANGS = {"live_chat"}
 
 
-def probe_url(url: str) -> UrlInfo:
+def probe_url(url: str, *, cookies: str | None = None) -> UrlInfo:
     """Detecta si la URL es un video unico o una playlist y lista sus entradas (B3).
 
     Usa `--flat-playlist --dump-json` (una linea JSON por entrada, sin resolver
-    cada video), barato y suficiente para ordenar y numerar el lote.
+    cada video), barato y suficiente para ordenar y numerar el lote. `cookies`
+    (nombre de navegador o ruta a cookies.txt) sortea el login/anti-bot (P8).
     """
     ytdlp = ensure_ytdlp()
     result = run(
         [
             ytdlp,
+            *cookie_args(cookies),
             "--flat-playlist",
             "--dump-json",
             "--ignore-no-formats-error",
@@ -101,19 +103,21 @@ def download(
     lang: str | None = None,
     allow_auto_subs: bool = False,
     keep_video: bool = False,
+    cookies: str | None = None,
 ) -> DownloadResult:
     """Descarga `bestaudio` + subtitulos de una URL de video unico a `work_dir`.
 
     Prioriza subtitulos oficiales del creador; los auto-generados solo se
     descargan si `allow_auto_subs` (spec §6, ASR). Devuelve un `DownloadResult`
     con el audio, el subtitulo (o None) y metadatos. Lanza `DownloadFailed` con
-    la causa clasificada si yt-dlp falla.
+    la causa clasificada si yt-dlp falla. `cookies` (nombre de navegador o ruta a
+    cookies.txt) sortea el login/anti-bot (P8).
     """
     ytdlp = ensure_ytdlp()
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    meta = _fetch_metadata(ytdlp, url)
+    meta = _fetch_metadata(ytdlp, url, cookies=cookies)
     video_id = meta.get("id") or "video"
     title = meta.get("title") or video_id
     video_language = meta.get("language")
@@ -125,6 +129,7 @@ def download(
     out_template = str(work_dir / "%(id)s.%(ext)s")
     cmd = [
         ytdlp,
+        *cookie_args(cookies),
         "--no-playlist",
         "-f", "bestaudio/best",
         "-o", out_template,
@@ -164,9 +169,12 @@ def download(
     )
 
 
-def _fetch_metadata(ytdlp: str, url: str) -> dict:
+def _fetch_metadata(ytdlp: str, url: str, *, cookies: str | None = None) -> dict:
     """Trae los metadatos del video (id, titulo, idioma, subtitulos disponibles)."""
-    result = run([ytdlp, "--no-playlist", "--dump-json", "--skip-download", url])
+    result = run(
+        [ytdlp, *cookie_args(cookies), "--no-playlist", "--dump-json",
+         "--skip-download", url]
+    )
     if result.returncode != 0:
         cause = classify_failure(result.stderr)
         raise DownloadFailed(

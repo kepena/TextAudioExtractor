@@ -59,13 +59,21 @@ léela primero.**
   vacío) y duplicados idénticos consecutivos. Verificado contra el VTT real de TED
   (427 segmentos, 0 timestamps colados). `pytest` 57/57 (+2 tests de regresión),
   `ruff` limpio.
-- **P8** ⏳ Limitación del módulo online: **no pasa cookies a `yt-dlp`**. YouTube
-  hoy exige login/verificación anti-bot para esta máquina (`HTTP 429` +
-  "Sign in to confirm you're not a bot" + aviso de que falta un runtime JS/deno),
-  así que los videos de YouTube quedan inaccesibles desde la app aunque la ruta de
-  error avise correctamente. Decidir si se agrega soporte `--cookies-from-browser`
-  (y/o instalar `deno`) para el módulo online. Es bloqueo externo + brecha de
-  robustez, no un bug del código.
+- **P8** ✅ Soporte de cookies + detección de runtime JS (2026-07-27). Decidido con
+  Kike: (a) **un solo campo `cookies` configurable** que acepta nombre de navegador
+  (`firefox`/`chrome`/`edge`, con spec `browser[:profile]`) → `--cookies-from-browser`,
+  o cualquier otra cosa (ruta a `cookies.txt`) → `--cookies FILE`; helper
+  `cookie_args()` en `ytdlp_utils`, cableado a las 3 invocaciones de yt-dlp
+  (`probe_url`, `_fetch_metadata`, `download`) y propagado por el runner (incluida la
+  reconstrucción por-entrada del lote). (b) **Runtime JS: detectar y avisar** (estilo
+  invariante 5, sin bundlear): `find_js_runtime()` busca deno/node/bun; si falta,
+  CLI y GUI emiten `JS_RUNTIME_HINT` una vez por corrida (no revienta). Flag CLI
+  `tae url --cookies`, campo en la GUI (con tooltip: en Windows Firefox es el más
+  fiable, Chrome/Edge cifran cookies). Mensajes `NEEDS_LOGIN`/`EXTRACTOR_ERROR`
+  actualizados para apuntar al campo de cookies y a deno. `pytest` 76/76 (+16),
+  `ruff` limpio. Nota: esta máquina ya tiene Node en el PATH, así que el requisito
+  de runtime JS de YouTube está cubierto. Falta una prueba de red real con un video
+  de YouTube usando cookies del navegador (queda para cuando Kike la quiera correr).
 - **P9** ✅ Bug del `live_chat.json` encontrado y corregido (2026-07-27) durante el
   caso 4. En videos que fueron premiere/directo, yt-dlp deja un `id.live_chat.json`
   (chat en vivo) como sidecar: (1) `_choose_subtitle` lo elegía vía

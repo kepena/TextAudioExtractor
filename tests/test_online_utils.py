@@ -10,7 +10,12 @@ from tae.online.errors import (
     YtDlpNotFound,
     message_for,
 )
-from tae.online.ytdlp_utils import ensure_ytdlp, find_ytdlp
+from tae.online.ytdlp_utils import (
+    cookie_args,
+    ensure_ytdlp,
+    find_js_runtime,
+    find_ytdlp,
+)
 
 
 def test_ytdlp_ausente_da_error_claro(monkeypatch):
@@ -55,3 +60,54 @@ def test_download_failed_lleva_causa_y_url():
     default = DownloadFailed("boom")
     assert default.cause is FailureCause.UNKNOWN
     assert default.url is None
+
+
+# ---------- cookie_args (P8) ----------
+@pytest.mark.parametrize("value", [None, "", "   "])
+def test_cookie_args_vacio_sin_args(value):
+    """Sin cookies, no se agrega nada al comando."""
+    assert cookie_args(value) == []
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("firefox", ["--cookies-from-browser", "firefox"]),
+        ("Chrome", ["--cookies-from-browser", "Chrome"]),  # case-insensitive
+        ("firefox:default", ["--cookies-from-browser", "firefox:default"]),
+        ("chrome+gnomekeyring", ["--cookies-from-browser", "chrome+gnomekeyring"]),
+        ("  edge  ", ["--cookies-from-browser", "edge"]),  # se recorta
+    ],
+)
+def test_cookie_args_navegador(value, expected):
+    """Un nombre de navegador conocido -> --cookies-from-browser (preserva el spec)."""
+    assert cookie_args(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        r"C:\Users\kike\cookies.txt",
+        "/home/kike/cookies.txt",
+        "cookies.txt",
+    ],
+)
+def test_cookie_args_archivo(value):
+    """Cualquier cosa que no sea un navegador conocido -> --cookies FILE."""
+    assert cookie_args(value) == ["--cookies", value]
+
+
+# ---------- find_js_runtime (P8, deno/node) ----------
+def test_find_js_runtime_presente(monkeypatch):
+    """Devuelve la ruta del primer runtime JS disponible (deno primero)."""
+    monkeypatch.setattr(
+        "tae.online.ytdlp_utils.shutil.which",
+        lambda exe: "/usr/bin/deno" if exe == "deno" else None,
+    )
+    assert find_js_runtime() == "/usr/bin/deno"
+
+
+def test_find_js_runtime_ausente(monkeypatch):
+    """Sin ningun runtime JS en PATH, devuelve None (se avisa, no se revienta)."""
+    monkeypatch.setattr("tae.online.ytdlp_utils.shutil.which", lambda _: None)
+    assert find_js_runtime() is None

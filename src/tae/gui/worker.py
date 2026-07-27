@@ -81,10 +81,12 @@ class OnlineWorker(QThread):
     def run(self) -> None:  # ejecutado en el hilo
         from ..online.download import probe_url
         from ..online.runner import run_playlist, run_url
-        from ..online.ytdlp_utils import ensure_ytdlp
+        from ..online.ytdlp_utils import JS_RUNTIME_HINT, ensure_ytdlp, find_js_runtime
 
         try:
             ensure_ytdlp()
+            if find_js_runtime() is None:
+                self.info.emit(JS_RUNTIME_HINT)
             self.stage.emit("Inspeccionando la URL...")
             url_info = probe_url(self._options.url)
             if url_info.is_playlist:

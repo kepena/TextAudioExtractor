@@ -194,3 +194,53 @@ def test_probe_url_falla_se_traduce(monkeypatch):
     with pytest.raises(DownloadFailed) as exc:
         probe_url("http://x")
     assert exc.value.cause is FailureCause.UNAVAILABLE
+
+
+# ---------- cookies llegan a yt-dlp (P8) ----------
+def test_probe_url_pasa_cookies_de_navegador(monkeypatch):
+    seen: list[list[str]] = []
+
+    def fake_run(cmd, *, capture=True):
+        seen.append(cmd)
+        return _cp(stdout=json.dumps({"_type": "video", "id": "v1", "url": "http://v1"}))
+
+    monkeypatch.setattr(dl_mod, "run", fake_run)
+    probe_url("http://v1", cookies="firefox")
+    assert seen and "--cookies-from-browser" in seen[0]
+    assert seen[0][seen[0].index("--cookies-from-browser") + 1] == "firefox"
+
+
+def test_download_pasa_cookies_a_metadata_y_descarga(monkeypatch, tmp_path):
+    # Todas las invocaciones de yt-dlp (metadata + descarga) deben llevar las cookies.
+    cmds: list[list[str]] = []
+
+    def fake_run(cmd, *, capture=True):
+        cmds.append(cmd)
+        if "--dump-json" in cmd:
+            return _cp(stdout=_meta_json())
+        (tmp_path / "abc123.m4a").write_bytes(b"audio")
+        return _cp()
+
+    monkeypatch.setattr(dl_mod, "run", fake_run)
+    download("http://x", tmp_path, cookies="/ruta/cookies.txt")
+    assert cmds, "yt-dlp no fue invocado"
+    for cmd in cmds:
+        assert "--cookies" in cmd
+        assert cmd[cmd.index("--cookies") + 1] == "/ruta/cookies.txt"
+
+
+def test_download_sin_cookies_no_agrega_flag(monkeypatch, tmp_path):
+    cmds: list[list[str]] = []
+
+    def fake_run(cmd, *, capture=True):
+        cmds.append(cmd)
+        if "--dump-json" in cmd:
+            return _cp(stdout=_meta_json())
+        (tmp_path / "abc123.m4a").write_bytes(b"audio")
+        return _cp()
+
+    monkeypatch.setattr(dl_mod, "run", fake_run)
+    download("http://x", tmp_path)
+    for cmd in cmds:
+        assert "--cookies" not in cmd
+        assert "--cookies-from-browser" not in cmd

@@ -22,7 +22,7 @@ def _entries(n):
 def test_run_playlist_captura_fallo_y_sigue(monkeypatch, tmp_path):
     monkeypatch.setattr(
         runner_mod, "probe_url",
-        lambda url: UrlInfo(is_playlist=True, entries=_entries(3), playlist_title="Lista"),
+        lambda url, **kw: UrlInfo(is_playlist=True, entries=_entries(3), playlist_title="Lista"),
     )
 
     seen_stems = []
@@ -52,7 +52,7 @@ def test_run_playlist_captura_fallo_y_sigue(monkeypatch, tmp_path):
 def test_run_playlist_error_inesperado_no_tumba_lote(monkeypatch, tmp_path):
     monkeypatch.setattr(
         runner_mod, "probe_url",
-        lambda url: UrlInfo(is_playlist=True, entries=_entries(2)),
+        lambda url, **kw: UrlInfo(is_playlist=True, entries=_entries(2)),
     )
 
     def fake_run_url(opts, *, out_stem=None, **kw):
@@ -71,7 +71,7 @@ def test_run_playlist_error_inesperado_no_tumba_lote(monkeypatch, tmp_path):
 def test_summarize_batch_texto_legible(monkeypatch, tmp_path):
     monkeypatch.setattr(
         runner_mod, "probe_url",
-        lambda url: UrlInfo(is_playlist=True, entries=_entries(2)),
+        lambda url, **kw: UrlInfo(is_playlist=True, entries=_entries(2)),
     )
 
     def fake_run_url(opts, *, out_stem=None, **kw):
