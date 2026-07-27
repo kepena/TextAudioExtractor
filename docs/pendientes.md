@@ -79,10 +79,17 @@ léela primero.**
   instalados; Edge/Brave cifran la BD → "Could not copy Chrome cookie database").
   Se añadió `FailureCause.COOKIES_ERROR`: antes ese fallo caía en "causa no
   identificada"; ahora la app avisa claro y recomienda exportar un `cookies.txt`.
-  El camino `--cookies <archivo.txt>` sí quedó verificado end-to-end. Falta solo la
-  prueba con cookies **reales** de YouTube (Kike exporta su cookies.txt) contra un
-  video que exija login/anti-bot. Además: **yt-dlp no es dependencia pip** (invariante
-  5); si falta en el venv, reinstalar con
+  **Verificado con cookies reales (2026-07-27):** Kike exportó su `cookies.txt` de
+  Brave con la extensión "Get cookies.txt LOCALLY" y la corrida generó .txt/.srt/.mp3
+  sin romperse. Hallazgo clave del setup de Kike: el **navegador principal es Brave**,
+  y en su Windows `--cookies-from-browser brave` NO sirve (abierto → base bloqueada;
+  cerrado → lee cookies pero YouTube devuelve "No video formats found"); en cambio el
+  **`cookies.txt` exportado sí funciona**. Recomendación operativa: dejar el campo de
+  cookies vacío para videos normales (hoy la máquina no está bloqueada), y usar
+  `cookies.txt` (de una cuenta **desechable**, no la principal de Google) solo cuando
+  un video exija login/edad o vuelva el anti-bot. Feature cerrado; queda opcional
+  probar un video con restricción de edad real. Además: **yt-dlp no es dependencia
+  pip** (invariante 5) y un `uv sync` lo borra del venv; reinstalar con
   `uv pip install -U yt-dlp --python "C:/Users/kepen/.venvs/unidadso-ordenes/Scripts/python.exe"`.
 - **P9** ✅ Bug del `live_chat.json` encontrado y corregido (2026-07-27) durante el
   caso 4. En videos que fueron premiere/directo, yt-dlp deja un `id.live_chat.json`
