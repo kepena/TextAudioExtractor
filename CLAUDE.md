@@ -48,9 +48,14 @@ video (local | YouTube/online)
 ## Mapa de archivos
 
 - `src/tae/core/` — motor headless (sin GUI): `models`, `errors`, `ffmpeg_utils`,
-  `probe`, `audio`, `subtitles`, `transcribe`, `outputs`, `pipeline`.
-- `src/tae/cli.py` — CLI typer (`tae`).
-- `src/tae/gui/` — GUI PySide6: `app` (ventana) + `worker` (QThread).
+  `probe`, `audio`, `subtitles` (SRT + `parse_vtt`), `transcribe`, `outputs`,
+  `pipeline`.
+- `src/tae/online/` — módulo online aislado (yt-dlp): `ytdlp_utils`, `errors`
+  (con `FailureCause`), `download` (descarga + `probe_url`), `naming`, `models`,
+  `runner` (`run_url` / `run_playlist`). No lo importa el core (invariante 4).
+- `src/tae/cli.py` — CLI typer: subcomandos `tae local <video>` y `tae url <URL>`.
+- `src/tae/gui/` — GUI PySide6: `app` (ventana, con campo URL) + `worker`
+  (`PipelineWorker` local + `OnlineWorker` online).
 - `tests/` — pytest (salidas, parseo SRT, invariantes, integración con media).
 - `pyproject.toml` — deps y config (uv, ruff, pytest).
 - `docs/` — proceso vivo (ver abajo).
@@ -80,10 +85,14 @@ video (local | YouTube/online)
 
 ## Estado actual
 
-- ✅ MVP implementado y verificado (2026-07-26): motor + CLI + GUI. `pytest` 17/17,
-  `ruff` limpio, transcripción end-to-end en GPU (RTX 4050, CUDA/float16).
-- ⏳ Falta prueba manual de la GUI con un video de voz real (P4) y el módulo
-  YouTube/online (P5, fase posterior).
+- ✅ MVP implementado y verificado (2026-07-26): motor + CLI + GUI. Transcripción
+  end-to-end en GPU (RTX 4050, CUDA/float16).
+- ✅ Fase 4 — módulo online (2026-07-26): `src/tae/online/`, subcomandos
+  `tae local`/`tae url`, playlists en lote, GUI con campo URL. `pytest` 55/55,
+  `ruff` limpio. Red real verificada (caso 1 subs del creador + caso 2/3
+  force-transcribe con "Me at the zoo"). Ver P5 en `docs/pendientes.md`.
+- ⏳ Falta: prueba manual de la GUI con voz real (P4) y una playlist real con fallo
+  end-to-end (caso 4; lógica ya cubierta por unit test).
 
 ## Flujo y verificación
 

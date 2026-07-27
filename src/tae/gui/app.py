@@ -35,7 +35,7 @@ from ..core.errors import TaeError, UnreadableVideo
 from ..core.ffmpeg_utils import find_ffmpeg
 from ..core.models import JobOptions, JobResult, ProbeResult
 from ..core.probe import probe as probe_video
-from .worker import PipelineWorker
+from .worker import OnlineWorker, PipelineWorker
 
 VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v", ".flv", ".wmv"}
 MODELS = ["tiny", "base", "small", "medium", "large-v3"]
@@ -269,6 +269,22 @@ class MainWindow(QWidget):
         self.info_label.setWordWrap(True)
         root.addWidget(self.info_label)
 
+        # Online (URL de YouTube/plataformas)
+        url_box = QGroupBox("O pega una URL (YouTube/online)")
+        url_layout = QVBoxLayout(url_box)
+        self.url_edit = QLineEdit()
+        self.url_edit.setPlaceholderText("https://www.youtube.com/watch?v=…  ·  tambien playlists")
+        self.url_edit.textChanged.connect(self._on_url_changed)
+        url_layout.addWidget(self.url_edit)
+        url_opts = QHBoxLayout()
+        self.cb_auto_subs = QCheckBox("Aceptar subtitulos auto-generados")
+        self.cb_keep = QCheckBox("Conservar la fuente descargada")
+        url_opts.addWidget(self.cb_auto_subs)
+        url_opts.addWidget(self.cb_keep)
+        url_opts.addStretch()
+        url_layout.addLayout(url_opts)
+        root.addWidget(url_box)
+
         # Salidas
         out_box = QGroupBox("Que quieres generar")
         out_layout = QHBoxLayout(out_box)
@@ -396,10 +412,21 @@ class MainWindow(QWidget):
         )
         default_out = path.parent / path.stem
         self.out_edit.setText(str(default_out))
-        self.start_btn.setEnabled(True)
         self.open_btn.setEnabled(False)
         self.progress.setValue(0)
         self.stage_label.setText("")
+        self._update_start_enabled()
+
+    def _on_url_changed(self, text: str) -> None:
+        """Al escribir una URL, sugiere una carpeta de salida si no hay ninguna."""
+        if text.strip() and not self.out_edit.text().strip():
+            self.out_edit.setText(str(Path.home() / "TextAudioExtractor"))
+        self._update_start_enabled()
+
+    def _update_start_enabled(self) -> None:
+        has_source = self._video is not None or bool(self.url_edit.text().strip())
+        running = self._worker is not None and self._worker.isRunning()
+        self.start_btn.setEnabled(has_source and not running)
 
     def _pick_out_dir(self) -> None:
         start = self.out_edit.text() or ""
@@ -409,10 +436,14 @@ class MainWindow(QWidget):
 
     # ---------- Procesar ----------
     def _start(self) -> None:
-        if not self._video:
-            return
         if not (self.cb_txt.isChecked() or self.cb_srt.isChecked() or self.cb_audio.isChecked()):
             QMessageBox.information(self, "Nada que generar", "Marca al menos una salida.")
+            return
+        # La URL tiene prioridad si el usuario escribio una.
+        if self.url_edit.text().strip():
+            self._start_online()
+            return
+        if not self._video:
             return
         out_dir = Path(self.out_edit.text().strip() or (self._video.parent / self._video.stem))
 
@@ -440,16 +471,52 @@ class MainWindow(QWidget):
         self.progress.setValue(0)
         self._worker.start()
 
+    def _start_online(self) -> None:
+        from ..online.models import OnlineJobOptions
+
+        url = self.url_edit.text().strip()
+        out_dir = Path(self.out_edit.text().strip() or (Path.home() / "TextAudioExtractor"))
+
+        opts = OnlineJobOptions(
+            url=url,
+            out_dir=out_dir,
+            want_txt=self.cb_txt.isChecked(),
+            want_srt=self.cb_srt.isChecked(),
+            want_audio=self.cb_audio.isChecked(),
+            force_transcribe=self.cb_force.isChecked(),
+            language=LANGUAGES[self.cmb_lang.currentIndex()][1],
+            model=self.cmb_model.currentText(),
+            allow_auto_subs=self.cb_auto_subs.isChecked(),
+            keep_video=self.cb_keep.isChecked(),
+        )
+        self._last_out_dir = out_dir
+
+        self._worker = OnlineWorker(opts)
+        self._worker.stage.connect(self._on_stage)
+        self._worker.info.connect(self._on_info)
+        self._worker.progress.connect(self._on_progress)
+        self._worker.item.connect(self._on_item)
+        self._worker.finished_ok.connect(self._on_finished)
+        self._worker.finished_batch.connect(self._on_finished_batch)
+        self._worker.failed.connect(self._on_failed)
+        self._worker.cancelled.connect(self._on_cancelled)
+
+        self._set_running(True)
+        self.progress.setValue(0)
+        self._worker.start()
+
     def _cancel(self) -> None:
         if self._worker:
             self.stage_label.setText("Cancelando…")
             self._worker.cancel()
 
     def _set_running(self, running: bool) -> None:
-        self.start_btn.setEnabled(not running and self._video is not None)
+        has_source = self._video is not None or bool(self.url_edit.text().strip())
+        self.start_btn.setEnabled(not running and has_source)
         self.cancel_btn.setEnabled(running)
         self.pick_btn.setEnabled(not running)
         self.out_btn.setEnabled(not running)
+        self.url_edit.setEnabled(not running)
 
     # ---------- Señales del worker ----------
     def _on_stage(self, msg: str) -> None:
@@ -474,6 +541,25 @@ class MainWindow(QWidget):
         extra = f" · idioma {result.language}" if result.language else ""
         self.stage_label.setText(f"Listo: {', '.join(parts)}{extra}")
         self.open_btn.setEnabled(True)
+
+    def _on_item(self, pos: int, total: int, title: str) -> None:
+        self.stage_label.setText(f"[{pos}/{total}] {title}")
+        self.progress.setValue(0)
+
+    def _on_finished_batch(self, report: object) -> None:
+        from ..online.runner import summarize_batch
+
+        self._set_running(False)
+        self.progress.setValue(100)
+        ok = len(report.successes)
+        fail = len(report.failures)
+        self.stage_label.setText(f"Lote listo: {ok} ok, {fail} con fallo.")
+        self.open_btn.setEnabled(ok > 0)
+        box = QMessageBox(self)
+        box.setWindowTitle("Lote terminado")
+        box.setIcon(QMessageBox.Warning if fail else QMessageBox.Information)
+        box.setText(summarize_batch(report))
+        box.exec()
 
     def _on_failed(self, msg: str) -> None:
         self._set_running(False)

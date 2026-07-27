@@ -18,7 +18,15 @@ léela primero.**
   flujo visual completo (arrastrar → salidas → carpeta → progreso → abrir carpeta).
   UI ya rebrandeada a Kaiketek (tema claro, colores, Montserrat/Poppins empaquetadas,
   ícono de app, footer "Powered by"); falta la corrida real con voz.
-- **P5** ⏳ (Fase posterior) Módulo YouTube/online con `yt-dlp`.
+- **P5** ✅ Módulo YouTube/online con `yt-dlp` implementado (2026-07-26). Paquete
+  aislado `src/tae/online/` (verificación de yt-dlp, errores tipados con causa,
+  descarga audio+subs, `parse_vtt` en el core, runners video/playlist, naming),
+  subcomandos `tae local` / `tae url`, y cableado en la GUI (campo URL + opciones).
+  `pytest` 55/55, `ruff` limpio. Red real verificada: caso 1 (subs del creador →
+  sin Whisper) y caso 2/3 (`--force-transcribe` → Whisper GPU) con "Me at the zoo".
+  Falta prueba de red de una playlist real con fallo (caso 4): la lógica está en
+  unit test y la clasificación de fallo real quedó probada; queda correr una
+  playlist end-to-end cuando haya una URL. Ver `docs/plans/2026-07-27-modulo-online-youtube.md`.
 - **P6** ⏳ Kike debe colocar el logo real en
   `src/tae/gui/assets/kaiketek-logo.png` (PNG con transparencia). El código ya lo
   detecta solo; mientras tanto usa `tree.svg` de respaldo.
