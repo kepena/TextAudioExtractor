@@ -38,9 +38,13 @@ léela primero.**
   .srt/.txt derivados de la pista de subs, sin transcribir). También verificada la
   ruta de error de la GUI: diálogo claro y clasificado, sin crash. Sigue pendiente
   el **caso 4 (playlist real)**: hoy YouTube bloquea esta máquina (ver P8).
-- **P6** ⏳ Kike debe colocar el logo real en
-  `src/tae/gui/assets/kaiketek-logo.png` (PNG con transparencia). El código ya lo
-  detecta solo; mientras tanto usa `tree.svg` de respaldo.
+- **P6** ✅ Logo real colocado (2026-07-27) en `src/tae/gui/assets/kaiketek-logo.png`
+  (256×256, fondo transparente, 43 KB). Origen: `LogoKaiketekTransparente.png` del
+  repositorio de Marca (el árbol solo, sin wordmark), auto-recortado al contenido
+  para que llene el ícono. Ahora se usa en el footer ("Powered by · árbol · KAIKETEK")
+  y como ícono de ventana/taskbar. `_find_logo()` lo detecta primero; `tree.svg`
+  queda como respaldo. El ícono grande del header sigue con `appicon.svg` (no se
+  pidió cambiarlo).
 - **P7** ✅ Bug de parseo VTT encontrado y corregido (2026-07-27) durante la
   verificación online con un TED talk. `parse_vtt`/`parse_srt` asumían **un solo
   timestamp por bloque**; los VTT de TED (y otros "rolling captions") pegan varios
