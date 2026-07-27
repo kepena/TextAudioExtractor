@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import re
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 from .errors import SubtitleExtractionFailed
@@ -57,24 +58,7 @@ def extract_subtitles(video: Path, track_index: int = 0) -> list[Segment]:
 
 def parse_srt(content: str) -> list[Segment]:
     """Parsea texto en formato SRT a una lista de Segment. Tolerante a ruido."""
-    segments: list[Segment] = []
-    blocks = re.split(r"\r?\n\r?\n+", content.strip())
-    for block in blocks:
-        lines = [ln for ln in block.splitlines() if ln.strip() != ""]
-        if not lines:
-            continue
-        time_line_idx = _find_time_line(lines)
-        if time_line_idx is None:
-            continue
-        m = _TIME_RE.search(lines[time_line_idx])
-        if not m:
-            continue
-        start = _to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
-        end = _to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
-        text = " ".join(lines[time_line_idx + 1 :]).strip()
-        if text:
-            segments.append(Segment(start=start, end=end, text=text))
-    return segments
+    return _parse_cues(content, _clean_srt_text)
 
 
 def parse_vtt(content: str) -> list[Segment]:
@@ -83,28 +67,52 @@ def parse_vtt(content: str) -> list[Segment]:
     WebVTT es casi SRT pero con cabecera `WEBVTT`, milisegundos con `.`, posibles
     *cue settings* tras el timestamp (`align:start position:0%`) y tags inline
     (`<c>`, `<00:00:01.000>`). Los bloques que no son cues (header, `NOTE`,
-    `STYLE`, `REGION`) no traen linea de tiempo y se ignoran solos. Reutiliza
-    `_to_seconds` y `_find_time_line`, igual que `parse_srt`.
+    `STYLE`, `REGION`) no traen linea de tiempo y se ignoran solos.
+    """
+    return _parse_cues(content, _clean_vtt_text)
+
+
+def _parse_cues(content: str, clean: Callable[[str], str]) -> list[Segment]:
+    """Motor comun de SRT/VTT. Un bloque puede traer MAS de un cue.
+
+    Algunos WebVTT (p. ej. los "rolling captions" de TED) no separan cada cue con
+    una linea en blanco: un mismo bloque acumula varias lineas de tiempo. Por eso
+    se recorren TODAS las lineas `-->` del bloque, no solo la primera, y el texto
+    de cada cue son las lineas hasta el siguiente timestamp. Ademas se descartan
+    cues degenerados (texto vacio) y duplicados identicos consecutivos.
     """
     segments: list[Segment] = []
     blocks = re.split(r"\r?\n\r?\n+", content.strip())
     for block in blocks:
         lines = [ln for ln in block.splitlines() if ln.strip() != ""]
-        if not lines:
-            continue
-        time_line_idx = _find_time_line(lines)
-        if time_line_idx is None:
-            continue  # header WEBVTT, NOTE, STYLE, REGION: sin timestamp
-        m = _TIME_RE.search(lines[time_line_idx])
-        if not m:
-            continue
-        start = _to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
-        end = _to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
-        raw = " ".join(lines[time_line_idx + 1 :])
-        text = _clean_vtt_text(raw)
-        if text:
-            segments.append(Segment(start=start, end=end, text=text))
+        time_idxs = [i for i, ln in enumerate(lines) if _TIME_RE.search(ln)]
+        if not time_idxs:
+            continue  # header WEBVTT, NOTE, STYLE, REGION o bloque sin timestamp
+        for pos, ti in enumerate(time_idxs):
+            m = _TIME_RE.search(lines[ti])
+            if not m:
+                continue
+            start = _to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
+            end = _to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
+            end_idx = time_idxs[pos + 1] if pos + 1 < len(time_idxs) else len(lines)
+            text_lines = lines[ti + 1 : end_idx]
+            # Si sigue otro cue en el mismo bloque, la ultima linea puede ser el
+            # indice numerico del cue siguiente (SRT mal formado): descartarla.
+            if pos + 1 < len(time_idxs) and text_lines and text_lines[-1].strip().isdigit():
+                text_lines = text_lines[:-1]
+            text = clean(" ".join(text_lines))
+            if not text:
+                continue
+            seg = Segment(start=start, end=end, text=text)
+            if segments and _same_cue(segments[-1], seg):
+                continue  # duplicado exacto consecutivo (captions "rolling")
+            segments.append(seg)
     return segments
+
+
+def _clean_srt_text(raw: str) -> str:
+    """Colapsa espacios y recorta; el SRT no trae tags inline que limpiar."""
+    return re.sub(r"\s+", " ", raw).strip()
 
 
 def _clean_vtt_text(raw: str) -> str:
@@ -114,11 +122,8 @@ def _clean_vtt_text(raw: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _find_time_line(lines: list[str]) -> int | None:
-    for i, ln in enumerate(lines):
-        if _TIME_RE.search(ln):
-            return i
-    return None
+def _same_cue(a: Segment, b: Segment) -> bool:
+    return a.start == b.start and a.end == b.end and a.text == b.text
 
 
 def _to_seconds(h: str, m: str, s: str, ms: str) -> float:

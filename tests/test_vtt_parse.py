@@ -48,3 +48,39 @@ def test_parser_srt_sigue_intacto():
     segs = parse_srt(srt)
     assert len(segs) == 1
     assert segs[0].text == "Hola"
+
+
+# VTT estilo TED: cues sin linea en blanco entre ellos dentro del mismo bloque.
+# El primero es un cue degenerado (0.000->0.001) cuyo "texto" es un espacio
+# no-rompible, seguido pegado del cue real; y mas abajo, dos cues identicos
+# consecutivos (rolling captions). El parser ingenuo colaba el segundo timestamp
+# como texto y duplicaba lineas.
+TED_VTT = (
+    "WEBVTT\n\n"
+    "00:00:00.000 --> 00:00:00.001\n"
+    " \n"
+    "00:00:02.103 --> 00:00:04.678\n"
+    "Good morning. How are you?\n\n"
+    "00:00:28.491 --> 00:00:30.904\n"
+    "in all of the presentations\n"
+    "00:00:28.491 --> 00:00:30.904\n"
+    "in all of the presentations\n"
+)
+
+
+def test_parse_vtt_cues_pegados_sin_linea_en_blanco():
+    segs = parse_vtt(TED_VTT)
+    # El cue degenerado se descarta y el duplicado se colapsa: 2 segmentos.
+    assert len(segs) == 2
+    assert segs[0].start == 2.103
+    assert segs[0].text == "Good morning. How are you?"
+    assert segs[1].start == 28.491
+    assert segs[1].text == "in all of the presentations"
+
+
+def test_parse_vtt_no_filtra_timestamps_en_el_texto():
+    # Ningun timestamp debe colarse como texto de un cue.
+    for seg in parse_vtt(TED_VTT):
+        assert "-->" not in seg.text
+    # Y el cue degenerado de 1 ms no debe aparecer.
+    assert all(seg.start != 0.0 for seg in parse_vtt(TED_VTT))
