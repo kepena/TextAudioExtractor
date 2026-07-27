@@ -38,8 +38,13 @@ decisiones técnicas:
   `core/subtitles.py` (los subs de YouTube vienen en WebVTT). No se modifica ninguna
   firma existente.
 - **`yt-dlp` como binario del sistema:** se verifica al inicio con el mismo patrón
-  que `ffmpeg_utils.ensure_ffmpeg` (invariante 5). *(Decisión abierta menor — ver
-  Tarea 1: verificar binario vs. declararlo dependencia pip.)*
+  que `ffmpeg_utils.ensure_ffmpeg` (invariante 5). Decisión cerrada con Kike
+  (2026-07-27): binario del sistema, no dependencia pip — así el usuario lo
+  actualiza con `pip install -U yt-dlp` / winget cuando YouTube rompe un extractor,
+  sin esperar a un release de `tae`.
+- **CLI en subcomandos explícitos:** decisión cerrada con Kike (2026-07-27):
+  `tae local <video>` (flujo actual, renombrado) + `tae url <URL>` (nuevo). Rompe
+  intencionalmente la invocación directa `tae <video>` de hoy a cambio de claridad.
 - **Reutilización de `Segment`:** subtítulos descargados y transcripción producen la
   misma `list[Segment]`; de ahí salen `.srt` y `.txt` con `core.outputs`, sin
   duplicar código.
@@ -54,9 +59,6 @@ decisiones técnicas:
 - `ensure_ytdlp()` incluye un hint de instalación/actualización accionable
   (`pip install -U yt-dlp` / winget), cubriendo §6 "yt-dlp ausente/desactualizado".
 - **Archivos:** nuevo `src/tae/online/__init__.py`, `src/tae/online/ytdlp_utils.py`.
-- **Decisión abierta:** ¿verificar binario del sistema (recomendado, consistente con
-  ffmpeg) o añadir `yt-dlp` a `dependencies` en `pyproject.toml`? Recomiendo binario
-  del sistema para mantener el patrón. Confirmar con Kike antes de cerrar.
 - **Hecho cuando:** `ensure_ytdlp()` devuelve la ruta si está y lanza un error tipado
   con mensaje claro si no; test unitario que fuerza el caso "no está".
 
@@ -157,12 +159,10 @@ decisiones técnicas:
   `run_playlist`. Reusa los callbacks de consola (`on_stage/on_info/on_progress`) ya
   existentes.
 - Para lote, imprime el **resumen final** (éxitos/fallos con causa) al terminar.
-- **Decisión de estructura de CLI (requiere confirmación):** hoy `tae <video>` es el
-  único comando (`@app.command()` sin nombre). Para agregar `tae url` hay que pasar a
-  multi-comando. Propuesta: `tae local <video>` (el flujo actual, renombrado) + `tae
-  url <URL>`. Esto **rompe** la invocación `tae <video>` directa. Alternativa: mantener
-  el flujo local como comando por defecto vía callback `invoke_without_command`.
-  Recomiendo `local` + `url` explícitos por claridad; confirmar con Kike.
+- **Estructura de CLI (cerrada):** hoy `tae <video>` es el único comando
+  (`@app.command()` sin nombre). Pasa a subcomandos explícitos: `tae local <video>`
+  (el flujo actual, renombrado tal cual) + `tae url <URL>` (nuevo). Rompe
+  intencionalmente la invocación directa `tae <video>` de hoy.
 - **Archivos:** `src/tae/cli.py`.
 - **Hecho cuando:** `tae url <URL>` corre el flujo online end-to-end (con red real en
   prueba manual); `tae local <video>` sigue funcionando igual que antes; errores
@@ -171,11 +171,10 @@ decisiones técnicas:
 ### Bloque E — Dependencias, tests y no romper lo existente
 
 **E1. Dependencias (`pyproject.toml`)**
-- Según la decisión de A1: si se declara `yt-dlp` como dependencia pip, agregarlo a
-  `dependencies`. Si se deja como binario del sistema, documentarlo en el README
-  junto a ffmpeg. (Recomendación: binario del sistema.)
-- **Hecho cuando:** `uv sync` funciona; la ausencia de yt-dlp da error claro, no
-  crash.
+- `yt-dlp` es binario del sistema (A1): no se agrega a `dependencies`. Se documenta
+  en el README junto a ffmpeg, con el comando de instalación/actualización.
+- **Hecho cuando:** `uv sync` funciona sin tocar `yt-dlp`; la ausencia del binario da
+  error claro, no crash.
 
 **E2. Tests del módulo online (`tests/`)**
 - `test_vtt_parse.py` — parseo de WebVTT (B1).
@@ -190,8 +189,8 @@ decisiones técnicas:
 **E3. No romper el motor ni la CLI existentes (verificación explícita)**
 - Confirmar que `core/subtitles.py` sigue exportando `extract_subtitles`/`parse_srt`
   intactos y que `pipeline.run` no cambió.
-- Confirmar que el flujo local (`tae local <video>` o el default elegido) produce las
-  mismas salidas que antes de esta fase.
+- Confirmar que `tae local <video>` produce las mismas salidas que el `tae <video>`
+  de antes de esta fase (mismo comportamiento, solo cambia el nombre del comando).
 - **Hecho cuando:** los tests existentes (`test_pipeline_media`, `test_outputs`,
   `test_subtitles_parse`, `test_invariants`) pasan sin modificación.
 
