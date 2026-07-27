@@ -325,6 +325,16 @@ def classify_failure(stderr: str | None) -> FailureCause:
     ):
         return FailureCause.NEEDS_LOGIN
     if (
+        "cookie database" in text
+        or "cookies database" in text
+        or "could not copy" in text and "cookie" in text
+        or "could not find" in text and "cookies" in text
+        or "unable to decrypt" in text and "cookie" in text
+        or "failed to decrypt" in text and "cookie" in text
+        or "no such table: cookies" in text
+    ):
+        return FailureCause.COOKIES_ERROR
+    if (
         "video unavailable" in text
         or "has been removed" in text
         or "has been terminated" in text

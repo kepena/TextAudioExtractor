@@ -19,6 +19,7 @@ class FailureCause(StrEnum):
     GEOBLOCKED = "geoblocked"
     UNAVAILABLE = "unavailable"
     NEEDS_LOGIN = "needs_login"
+    COOKIES_ERROR = "cookies_error"
     EXTRACTOR_ERROR = "extractor_error"
     NETWORK = "network"
     UNKNOWN = "unknown"
@@ -41,6 +42,12 @@ CAUSE_MESSAGES: dict[FailureCause, str] = {
         "El video requiere iniciar sesion, confirmar edad o pasar la verificacion "
         "anti-bot. Indica cookies en el campo 'Cookies' (nombre de tu navegador con "
         "sesion en YouTube, ej. firefox, o la ruta a un cookies.txt) y reintenta."
+    ),
+    FailureCause.COOKIES_ERROR: (
+        "No pude leer las cookies del navegador. En Windows, Chrome y Edge las cifran "
+        "y suelen fallar (aunque cierres el navegador). Solucion: exporta un "
+        "cookies.txt con una extension (ej. 'Get cookies.txt LOCALLY') e indica su "
+        "ruta en el campo 'Cookies' en vez del nombre del navegador."
     ),
     FailureCause.EXTRACTOR_ERROR: (
         "yt-dlp no pudo procesar esta URL. Suele ser por yt-dlp desactualizado "

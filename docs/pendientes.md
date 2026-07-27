@@ -70,10 +70,20 @@ léela primero.**
   CLI y GUI emiten `JS_RUNTIME_HINT` una vez por corrida (no revienta). Flag CLI
   `tae url --cookies`, campo en la GUI (con tooltip: en Windows Firefox es el más
   fiable, Chrome/Edge cifran cookies). Mensajes `NEEDS_LOGIN`/`EXTRACTOR_ERROR`
-  actualizados para apuntar al campo de cookies y a deno. `pytest` 76/76 (+16),
+  actualizados para apuntar al campo de cookies y a deno. `pytest` 78/78 (+18),
   `ruff` limpio. Nota: esta máquina ya tiene Node en el PATH, así que el requisito
-  de runtime JS de YouTube está cubierto. Falta una prueba de red real con un video
-  de YouTube usando cookies del navegador (queda para cuando Kike la quiera correr).
+  de runtime JS de YouTube está cubierto.
+  **Verificado en red real (2026-07-27):** "Me at the zoo" descargado end-to-end
+  por la app (subs del creador → .txt/.srt/.mp3). Descubierto en la prueba: en esta
+  máquina Windows **ningún navegador deja leer cookies directo** (Firefox/Chrome no
+  instalados; Edge/Brave cifran la BD → "Could not copy Chrome cookie database").
+  Se añadió `FailureCause.COOKIES_ERROR`: antes ese fallo caía en "causa no
+  identificada"; ahora la app avisa claro y recomienda exportar un `cookies.txt`.
+  El camino `--cookies <archivo.txt>` sí quedó verificado end-to-end. Falta solo la
+  prueba con cookies **reales** de YouTube (Kike exporta su cookies.txt) contra un
+  video que exija login/anti-bot. Además: **yt-dlp no es dependencia pip** (invariante
+  5); si falta en el venv, reinstalar con
+  `uv pip install -U yt-dlp --python "C:/Users/kepen/.venvs/unidadso-ordenes/Scripts/python.exe"`.
 - **P9** ✅ Bug del `live_chat.json` encontrado y corregido (2026-07-27) durante el
   caso 4. En videos que fueron premiere/directo, yt-dlp deja un `id.live_chat.json`
   (chat en vivo) como sidecar: (1) `_choose_subtitle` lo elegía vía

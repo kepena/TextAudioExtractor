@@ -35,6 +35,14 @@ def _fake_ytdlp(monkeypatch):
         ("ERROR: This video is not available in your country", FailureCause.GEOBLOCKED),
         ("ERROR: Video unavailable. This video has been removed", FailureCause.UNAVAILABLE),
         ("ERROR: Sign in to confirm your age", FailureCause.NEEDS_LOGIN),
+        (
+            'ERROR: could not find firefox cookies database in "C:\\...\\Profiles"',
+            FailureCause.COOKIES_ERROR,
+        ),
+        (
+            "ERROR: Could not copy Chrome cookie database. See issues/7271",
+            FailureCause.COOKIES_ERROR,
+        ),
         ("ERROR: Unable to extract video data; please report", FailureCause.EXTRACTOR_ERROR),
         ("ERROR: <urlopen error getaddrinfo failed>", FailureCause.NETWORK),
         ("ERROR: algo totalmente distinto", FailureCause.UNKNOWN),
