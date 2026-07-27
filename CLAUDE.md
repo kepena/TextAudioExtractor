@@ -47,10 +47,13 @@ video (local | YouTube/online)
 
 ## Mapa de archivos
 
-Repo recién andamiado; el mapa se llena al implementar.
-
+- `src/tae/core/` — motor headless (sin GUI): `models`, `errors`, `ffmpeg_utils`,
+  `probe`, `audio`, `subtitles`, `transcribe`, `outputs`, `pipeline`.
+- `src/tae/cli.py` — CLI typer (`tae`).
+- `src/tae/gui/` — GUI PySide6: `app` (ventana) + `worker` (QThread).
+- `tests/` — pytest (salidas, parseo SRT, invariantes, integración con media).
+- `pyproject.toml` — deps y config (uv, ruff, pytest).
 - `docs/` — proceso vivo (ver abajo).
-- `CLAUDE.md` — este archivo.
 
 ## Invariantes y trampas de este proyecto
 
@@ -77,9 +80,10 @@ Repo recién andamiado; el mapa se llena al implementar.
 
 ## Estado actual
 
-- ⏳ Andamiaje del repo puesto. Siguiente paso: `k-design-specs` para el spec formal
-  del motor + GUI (con approval gate).
-- Nada implementado aún.
+- ✅ MVP implementado y verificado (2026-07-26): motor + CLI + GUI. `pytest` 17/17,
+  `ruff` limpio, transcripción end-to-end en GPU (RTX 4050, CUDA/float16).
+- ⏳ Falta prueba manual de la GUI con un video de voz real (P4) y el módulo
+  YouTube/online (P5, fase posterior).
 
 ## Flujo y verificación
 

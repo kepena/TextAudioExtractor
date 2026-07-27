@@ -1,0 +1,47 @@
+[project]
+name = "tae"
+version = "0.1.0"
+description = "Extractor de texto y audio de video (subtitulos incrustados o transcripcion local con Whisper)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "faster-whisper>=1.1.0",
+    "PySide6>=6.8.0",
+    "typer>=0.15.0",
+    # DLLs de CUDA para que CTranslate2 use la GPU en Windows (ver core/transcribe.py)
+    "nvidia-cublas-cu12>=12.4.0; platform_system == 'Windows'",
+    "nvidia-cudnn-cu12>=9.1.0; platform_system == 'Windows'",
+]
+
+[project.scripts]
+tae = "tae.cli:app"
+
+[project.gui-scripts]
+tae-gui = "tae.gui.app:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.9.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tae"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# typer declara opciones como llamadas en los defaults: es idiomatico, no un bug.
+"src/tae/cli.py" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
