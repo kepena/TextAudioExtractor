@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -234,7 +235,11 @@ class MainWindow(QWidget):
 
     # ---------- UI ----------
     def _build_ui(self) -> None:
-        root = QVBoxLayout(self)
+        # El contenido vive en un widget interno dentro de un QScrollArea: asi la
+        # ventana siempre cabe en la pantalla (se desplaza si es baja) y nunca deja
+        # el pie por fuera. La ventana en si solo aloja el scroll.
+        self.content = QWidget()
+        root = QVBoxLayout(self.content)
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(12)
 
@@ -369,6 +374,15 @@ class MainWindow(QWidget):
         footer.addStretch()
         root.addSpacing(4)
         root.addLayout(footer)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidget(self.content)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll)
 
     def _check_ffmpeg(self) -> None:
         if find_ffmpeg() is None:
@@ -601,9 +615,34 @@ def main() -> int:
     app.setStyleSheet(STYLE)
     window = MainWindow()
     window.show()
+    _place_window_top(window)
     window.raise_()
     window.activateWindow()
     return app.exec()
+
+
+def _place_window_top(window: QWidget) -> None:
+    """Ajusta el alto al area disponible y ancla la ventana arriba-centro.
+
+    Con el contenido dentro de un QScrollArea, la ventana nunca necesita ser mas
+    alta que la pantalla: si el contenido no cabe, se desplaza. Se corre despues
+    de show() para que frameGeometry() (que incluye la barra de titulo) sea real.
+    """
+    screen = window.screen()
+    if screen is None:
+        return
+    avail = screen.availableGeometry()
+    margin = 16
+    chrome = window.frameGeometry().height() - window.geometry().height()
+    max_h = avail.height() - chrome - 2 * margin
+    content_h = window.content.sizeHint().height() + 8
+    height = max(360, min(content_h, max_h))
+    width = max(window.width(), 620)
+    window.resize(width, height)
+    frame = window.frameGeometry()
+    frame.moveTop(avail.top() + margin)
+    frame.moveLeft(avail.left() + (avail.width() - frame.width()) // 2)
+    window.move(frame.topLeft())
 
 
 if __name__ == "__main__":
