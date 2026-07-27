@@ -361,6 +361,8 @@ def classify_failure(stderr: str | None) -> FailureCause:
         or "unable to download webpage" in text
         or "nsig extraction failed" in text
         or "requested format is not available" in text
+        or "no video formats found" in text
+        or "no formats found" in text
         or "extractor" in text
     ):
         return FailureCause.EXTRACTOR_ERROR

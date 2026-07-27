@@ -44,6 +44,10 @@ def _fake_ytdlp(monkeypatch):
             FailureCause.COOKIES_ERROR,
         ),
         ("ERROR: Unable to extract video data; please report", FailureCause.EXTRACTOR_ERROR),
+        (
+            "ERROR: [youtube] jNQXAC9IVRw: No video formats found!",
+            FailureCause.EXTRACTOR_ERROR,
+        ),
         ("ERROR: <urlopen error getaddrinfo failed>", FailureCause.NETWORK),
         ("ERROR: algo totalmente distinto", FailureCause.UNKNOWN),
         ("", FailureCause.UNKNOWN),
