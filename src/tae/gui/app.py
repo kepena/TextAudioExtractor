@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -144,14 +145,14 @@ QPushButton#primary {{
 }}
 QPushButton#primary:hover {{ background: {AZUL_KAI}; }}
 QPushButton#primary:disabled {{ background: #b6d4f5; color: {BLANCO}; }}
-QLineEdit, QComboBox {{
+QLineEdit, QComboBox, QSpinBox {{
     background: {BLANCO};
     border: 1.5px solid #cdd4da;
     border-radius: 8px;
     padding: 7px 10px;
 }}
-QComboBox:hover, QLineEdit:hover {{ border-color: {TURQUESA}; }}
-QLineEdit:focus, QComboBox:focus {{ border: 1.5px solid {AZUL_TEK}; }}
+QComboBox:hover, QLineEdit:hover, QSpinBox:hover {{ border-color: {TURQUESA}; }}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{ border: 1.5px solid {AZUL_TEK}; }}
 QComboBox::drop-down {{
     subcontrol-origin: padding;
     subcontrol-position: center right;
@@ -333,6 +334,22 @@ class MainWindow(QWidget):
         self.cmb_model.addItems(MODELS)
         self.cmb_model.setCurrentText("medium")
         grid.addWidget(self.cmb_model, 2, 1)
+        self.cb_diarize = QCheckBox("Identificar hablantes (transcribe el audio)")
+        self.cb_diarize.setToolTip(
+            "Separa quien habla y prefija cada intervencion con SPEAKER_00, "
+            "SPEAKER_01... Fuerza transcribir el audio (ignora subtitulos). "
+            "Necesita el extra whisperx y un token de HuggingFace; sin GPU es lento."
+        )
+        grid.addWidget(self.cb_diarize, 3, 0, 1, 2)
+        grid.addWidget(QLabel("Nº de hablantes:"), 4, 0)
+        self.spin_speakers = QSpinBox()
+        self.spin_speakers.setRange(0, 20)
+        self.spin_speakers.setValue(0)
+        self.spin_speakers.setSpecialValueText("Automatico")  # 0 = autodeteccion
+        self.spin_speakers.setToolTip(
+            "Dejalo en 'Automatico' o fija el numero si lo sabes (ej. 2 en una terapia)."
+        )
+        grid.addWidget(self.spin_speakers, 4, 1)
         root.addWidget(tr_box)
 
         # Carpeta de salida
@@ -457,6 +474,11 @@ class MainWindow(QWidget):
         running = self._worker is not None and self._worker.isRunning()
         self.start_btn.setEnabled(has_source and not running)
 
+    def _speakers_value(self) -> int | None:
+        """El nº de hablantes elegido; 0 (texto 'Automatico') significa autodeteccion."""
+        value = self.spin_speakers.value()
+        return value if value > 0 else None
+
     def _pick_out_dir(self) -> None:
         start = self.out_edit.text() or ""
         path = QFileDialog.getExistingDirectory(self, "Carpeta de salida", start)
@@ -485,6 +507,8 @@ class MainWindow(QWidget):
             force_transcribe=self.cb_force.isChecked(),
             language=LANGUAGES[self.cmb_lang.currentIndex()][1],
             model=self.cmb_model.currentText(),
+            diarize=self.cb_diarize.isChecked(),
+            num_speakers=self._speakers_value(),
         )
         self._last_out_dir = out_dir
 
@@ -518,6 +542,8 @@ class MainWindow(QWidget):
             allow_auto_subs=self.cb_auto_subs.isChecked(),
             keep_video=self.cb_keep.isChecked(),
             cookies=self.cookies_edit.text().strip() or None,
+            diarize=self.cb_diarize.isChecked(),
+            num_speakers=self._speakers_value(),
         )
         self._last_out_dir = out_dir
 
@@ -548,6 +574,8 @@ class MainWindow(QWidget):
         self.out_btn.setEnabled(not running)
         self.url_edit.setEnabled(not running)
         self.cookies_edit.setEnabled(not running)
+        self.cb_diarize.setEnabled(not running)
+        self.spin_speakers.setEnabled(not running)
 
     # ---------- Señales del worker ----------
     def _on_stage(self, msg: str) -> None:

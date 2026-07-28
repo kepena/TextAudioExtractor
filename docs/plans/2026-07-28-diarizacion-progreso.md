@@ -32,7 +32,7 @@ archivo primero y sigue con el bloque pendiente.
 - [x] **Bloque A — Motor (core)** · tareas A1–A5
 - [x] **Bloque B — CLI** · tarea B1
 - [x] **Bloque C — Online** · tareas C1–C3
-- [ ] **Bloque D — GUI** · tareas D1–D2
+- [x] **Bloque D — GUI** · tareas D1–D2
 - [ ] **Bloque E — Dependencias y docs** · tareas E1–E2
 - [ ] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
 
@@ -57,8 +57,8 @@ archivo primero y sigue con el bloque pendiente.
 - [ ] C3 Propagar `diarize`/`num_speakers` en `run_playlist`
 
 **D — GUI**
-- [ ] D1 Checkbox "Identificar hablantes" + campo nº hablantes (`gui/app.py`)
-- [ ] D2 Cablear a `JobOptions` y `OnlineJobOptions` (`_start` / `_start_online`)
+- [x] D1 Checkbox "Identificar hablantes" + campo nº hablantes (`gui/app.py`)
+- [x] D2 Cablear a `JobOptions` y `OnlineJobOptions` (`_start` / `_start_online`)
 
 **E — Deps y docs**
 - [ ] E1 Extra opcional `diarize = ["whisperx"]` (`pyproject.toml`)
@@ -100,3 +100,9 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   (un fallo de diarización en un video se clasifica sin abortar el lote, por el
   try/except existente). C1 ya venía del Bloque B. Import diferido intacto:
   `online.runner` no carga whisperx ni gui. `ruff` limpio, `pytest` 79/79.
+- 2026-07-28 · Bloque D (GUI) · D1: checkbox `cb_diarize` ("Identificar hablantes")
+  y `QSpinBox` `spin_speakers` ("Nº de hablantes", 0=Automatico) en el grupo
+  Transcripcion, con QSS coherente y deshabilitados durante la corrida. D2: `_start`
+  y `_start_online` pasan `diarize`/`num_speakers` a `JobOptions`/`OnlineJobOptions`
+  (helper `_speakers_value`, 0→None). Invariante 4 verificado: importar `tae.gui.app`
+  no carga whisperx. `ruff` limpio, `pytest` 79/79.
