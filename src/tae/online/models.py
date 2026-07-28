@@ -36,6 +36,8 @@ class OnlineJobOptions:
     allow_auto_subs: bool = False     # aceptar subtitulos auto-generados (ASR)
     keep_video: bool = False          # conservar los temporales descargados
     cookies: str | None = None        # navegador (firefox/chrome/...) o ruta a cookies.txt (P8)
+    diarize: bool = False             # identificar hablantes (whisperX, opt-in)
+    num_speakers: int | None = None   # nº de hablantes conocido; None = automatico
 
     @property
     def wants_text(self) -> bool:

@@ -30,8 +30,8 @@ archivo primero y sigue con el bloque pendiente.
 ## Tablero de bloques
 
 - [x] **Bloque A — Motor (core)** · tareas A1–A5
-- [ ] **Bloque B — CLI** · tarea B1
-- [ ] **Bloque C — Online** · tareas C1–C3
+- [x] **Bloque B — CLI** · tarea B1
+- [ ] **Bloque C — Online** · tareas C1–C3 (C1 ✅ adelantada en Bloque B; faltan C2, C3)
 - [ ] **Bloque D — GUI** · tareas D1–D2
 - [ ] **Bloque E — Dependencias y docs** · tareas E1–E2
 - [ ] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
@@ -46,10 +46,11 @@ archivo primero y sigue con el bloque pendiente.
 - [x] A5 Enrutar `pipeline._obtain_text` (diarize fuerza transcripción)
 
 **B — CLI**
-- [ ] B1 `--diarize` + `--speakers` en `tae local` y `tae url` (`cli.py`)
+- [x] B1 `--diarize` + `--speakers` en `tae local` y `tae url` (`cli.py`)
 
 **C — Online**
-- [ ] C1 `OnlineJobOptions.diarize`/`num_speakers` (`online/models.py`)
+- [x] C1 `OnlineJobOptions.diarize`/`num_speakers` (`online/models.py`) — adelantada
+  en Bloque B (el `url` de B1 la necesita para no reventar; ver Log)
 - [ ] C2 Enrutar `online/runner._obtain_text`
 - [ ] C3 Propagar `diarize`/`num_speakers` en `run_playlist`
 
@@ -82,3 +83,12 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   whisperX con import diferido y token HF), salidas con prefijo de hablante y
   enrutado en `pipeline._obtain_text`. `ruff` limpio, `pytest` 79/79 (outputs sin
   tocar). Verificado: importar `core.diarize` no carga whisperx y core no importa gui.
+  Commit `cc81b86`, push a main.
+- 2026-07-28 · Bloque B (CLI) · B1: `--diarize` + `--speakers` en `tae local` y
+  `tae url`, cableados a `JobOptions`/`OnlineJobOptions`. Se **adelantó C1** (campos
+  en `OnlineJobOptions`) porque el `url` de B1 los necesita: el plan ordena B1 antes
+  de C1, pero pasar el kwarg sin el campo hace `TypeError`; adelantar C1 evita
+  commitear un comando roto. **Falta Bloque C real (C2 enrutado en `online/runner`,
+  C3 propagación en playlist):** hoy `tae url --diarize` acepta la bandera pero el
+  runner online aún no diariza (usa la transcripción de siempre). `ruff` limpio,
+  `pytest` 79/79. `--help` de ambos muestra las flags.

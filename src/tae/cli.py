@@ -70,6 +70,13 @@ def local(
     audio_format: str = typer.Option(
         "mp3", "--audio-format", help="Formato del audio: mp3|m4a|wav|flac."
     ),
+    diarize: bool = typer.Option(
+        False, "--diarize",
+        help="Identificar hablantes (whisperX). Fuerza transcribir el audio.",
+    ),
+    speakers: int | None = typer.Option(
+        None, "--speakers", help="Nº de hablantes si se conoce (ej. 2). Por defecto automatico."
+    ),
 ) -> None:
     """Procesa un VIDEO local y escribe las salidas pedidas."""
     if not (txt or srt or audio):
@@ -87,6 +94,8 @@ def local(
         language=lang,
         model=model,
         audio_format=audio_format,
+        diarize=diarize,
+        num_speakers=speakers,
     )
 
     try:
@@ -136,6 +145,14 @@ def url(
         help="Cookies para login/anti-bot (YouTube): nombre de navegador con sesion "
         "(firefox, chrome, edge) o ruta a un cookies.txt.",
     ),
+    diarize: bool = typer.Option(
+        False, "--diarize",
+        help="Identificar hablantes (whisperX). Ignora subtitulos del creador y "
+        "transcribe el audio.",
+    ),
+    speakers: int | None = typer.Option(
+        None, "--speakers", help="Nº de hablantes si se conoce (ej. 2). Por defecto automatico."
+    ),
 ) -> None:
     """Descarga una URL (video o playlist) y escribe las salidas pedidas."""
     # Import diferido: el modulo online no debe cargarse en el flujo local.
@@ -161,6 +178,8 @@ def url(
         allow_auto_subs=allow_auto_subs,
         keep_video=keep_video,
         cookies=cookies,
+        diarize=diarize,
+        num_speakers=speakers,
     )
 
     try:
