@@ -21,8 +21,16 @@ léela primero.**
   0→100%, etiquetas de etapa ("Transcribiendo…", "Listo: … idioma es"), bloqueo
   de inputs en running, **Abrir carpeta** OK, **Cancelar** a mitad limpio (mensaje
   "Cancelado. No se generaron archivos válidos." + reset a 0%, sin corromper la
-  corrida previa), render de marca impecable. No probado: *drag-drop* (se usó el
-  diálogo "Elegir archivo" por fiabilidad de la automatización).
+  corrida previa), render de marca impecable.
+  **Drag-drop verificado (2026-07-27):** se arrastró un `.mp4` real desde el
+  Explorador a la zona de drop (control de escritorio). `DropFrame.dropEvent`
+  recibió la URL, filtró por `VIDEO_EXTS` y cargó igual que por diálogo: probe
+  correcto (0:06, sin subs, con audio), carpeta de salida auto, y generó el
+  audio en disco (`prueba_dragdrop.mp3`, 6.04 s). Sin cambios de código. Nota de
+  automatización: conducir un OLE drag cross-proceso con computer-use es frágil
+  (la ventana overlay de arrastre de Windows queda en primer plano y bloquea los
+  movimientos intermedios); lo que funcionó fue un `left_click_drag` único
+  (press→move→release nativo en un solo paso). P4 cerrado por completo.
 - **P5** ✅ Módulo YouTube/online con `yt-dlp` implementado (2026-07-26). Paquete
   aislado `src/tae/online/` (verificación de yt-dlp, errores tipados con causa,
   descarga audio+subs, `parse_vtt` en el core, runners video/playlist, naming),
