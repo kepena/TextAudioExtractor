@@ -23,6 +23,9 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
   `src/tae/online/`, subcomandos `tae local`/`tae url`, playlists en lote, GUI con
   campo URL. Verificado end-to-end en la GUI, incl. cookies y caso de fallo de
   lote. Ver P5 en `docs/pendientes.md`.
+- **Fase 5 — Diarización de hablantes** 🔨 Camino C (whisperX), opt-in `--diarize`.
+  Spec + plan aprobados (P10). Ejecución por bloques A→F en
+  `docs/plans/2026-07-28-diarizacion-progreso.md`.
 
 ## Decisiones tomadas (brainstorm 2026-07-26)
 

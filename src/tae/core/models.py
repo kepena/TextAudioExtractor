@@ -19,6 +19,7 @@ class Segment:
     start: float
     end: float
     text: str
+    speaker: str | None = None  # etiqueta de hablante (SPEAKER_00...) si se diariza
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,8 @@ class JobOptions:
     language: str | None = None       # None = autodeteccion
     model: str = "medium"             # tiny|base|small|medium|large-v3
     audio_format: str = "mp3"         # formato del audio entregado al usuario
+    diarize: bool = False             # identificar hablantes (whisperX, opt-in)
+    num_speakers: int | None = None   # nº de hablantes conocido; None = automatico
 
     @property
     def wants_text(self) -> bool:

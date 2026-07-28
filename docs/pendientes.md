@@ -109,3 +109,11 @@ léela primero.**
   los sidecars (json/miniaturas/…) y quedarse con el archivo más grande (el medio
   real pesa MB). Verificado en vivo: "Hensonn-Sahara" (que fallaba) ahora genera su
   mp3. `pytest` 60/60 (+3 tests), `ruff` limpio.
+- **P10** 🔨 Diarización de hablantes (Camino C, whisperX). Brainstorm + spec + plan
+  hechos (2026-07-28): opt-in `--diarize`/checkbox, whisperX solo con el flag,
+  `Segment.speaker`, salidas `SPEAKER_00:`, `--speakers N`, whisperx como extra
+  opcional + token HF de setup, degradar sin GPU. Spec:
+  `docs/specs/2026-07-28-diarizacion-hablantes.md`. Plan:
+  `docs/plans/2026-07-28-diarizacion-hablantes.md`. **Ejecución por sesiones en
+  bloques A→F:** seguir `docs/plans/2026-07-28-diarizacion-progreso.md` (tablero
+  vivo). Falta implementar y verificar (k-verify con GPU + token).

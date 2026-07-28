@@ -11,7 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from . import audio as audio_mod
-from . import outputs, subtitles, transcribe
+from . import diarize, outputs, subtitles, transcribe
 from .errors import Cancelled, NoAudioTrack, SubtitleExtractionFailed
 from .ffmpeg_utils import ensure_ffmpeg
 from .models import JobOptions, JobResult, ProbeResult, Segment, TextSource
@@ -92,7 +92,19 @@ def _obtain_text(
     should_cancel: CancelCb | None,
 ) -> tuple[list[Segment], TextSource, str | None]:
     """Devuelve (segmentos, fuente, idioma) segun subtitulos vs transcripcion."""
-    use_embedded = info_probe.has_subtitles and not options.force_transcribe
+    # --diarize fuerza transcribir el audio: los subtitulos no traen identidad de
+    # voz (spec §5), asi que se ignoran aunque existan.
+    use_embedded = (
+        info_probe.has_subtitles
+        and not options.force_transcribe
+        and not options.diarize
+    )
+
+    if options.diarize and info_probe.has_subtitles:
+        info(
+            "Ignoro los subtitulos incrustados: para identificar hablantes "
+            "transcribo el audio."
+        )
 
     if use_embedded:
         stage("Extrayendo los subtitulos incrustados...")
@@ -111,6 +123,8 @@ def _obtain_text(
 
     # Transcripcion
     if not info_probe.has_audio:
+        if options.diarize:
+            raise NoAudioTrack("El video no tiene pista de audio: no hay audio que diarizar.")
         raise NoAudioTrack(
             "El video no tiene subtitulos ni pista de audio: no hay texto que generar."
         )
@@ -118,14 +132,27 @@ def _obtain_text(
     with tempfile.TemporaryDirectory() as tmp:
         stage("Extrayendo el audio para transcribir...")
         wav = audio_mod.extract_wav_for_whisper(options.video, Path(tmp) / "audio.wav")
-        stage("Transcribiendo...")
-        segments, language = transcribe.transcribe(
-            wav,
-            model=options.model,
-            language=options.language,
-            duration=info_probe.duration,
-            on_progress=on_progress,
-            on_info=info,
-            should_cancel=should_cancel,
-        )
+        if options.diarize:
+            stage("Transcribiendo e identificando hablantes...")
+            segments, language = diarize.transcribe_and_diarize(
+                wav,
+                model=options.model,
+                language=options.language,
+                num_speakers=options.num_speakers,
+                duration=info_probe.duration,
+                on_progress=on_progress,
+                on_info=info,
+                should_cancel=should_cancel,
+            )
+        else:
+            stage("Transcribiendo...")
+            segments, language = transcribe.transcribe(
+                wav,
+                model=options.model,
+                language=options.language,
+                duration=info_probe.duration,
+                on_progress=on_progress,
+                on_info=info,
+                should_cancel=should_cancel,
+            )
     return segments, TextSource.TRANSCRIBED, language
