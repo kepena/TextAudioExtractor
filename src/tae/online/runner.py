@@ -13,7 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from tae.core import audio as core_audio
-from tae.core import outputs, subtitles, transcribe
+from tae.core import diarize, outputs, subtitles, transcribe
 from tae.core.ffmpeg_utils import ensure_ffmpeg
 from tae.core.models import Segment, TextSource
 
@@ -169,6 +169,8 @@ def run_playlist(
             allow_auto_subs=opts.allow_auto_subs,
             keep_video=opts.keep_video,
             cookies=opts.cookies,
+            diarize=opts.diarize,
+            num_speakers=opts.num_speakers,
         )
         try:
             res = run_url(
@@ -214,7 +216,19 @@ def _obtain_text(
     should_cancel: CancelCb | None,
 ) -> tuple[list[Segment], TextSource, str | None]:
     """Devuelve (segmentos, fuente, idioma): subtitulos del creador vs Whisper."""
-    use_sub = dl.subtitle_path is not None and not opts.force_transcribe
+    # --diarize fuerza transcribir el audio: los subtitulos del creador/auto no
+    # traen identidad de voz (spec §5), asi que se ignoran aunque existan.
+    use_sub = (
+        dl.subtitle_path is not None
+        and not opts.force_transcribe
+        and not opts.diarize
+    )
+
+    if opts.diarize and dl.subtitle_path is not None:
+        info(
+            "Ignoro los subtitulos del creador: para identificar hablantes "
+            "transcribo el audio."
+        )
 
     if use_sub and dl.subtitle_path is not None:
         origen = "auto-generados" if dl.subtitle_is_auto else "del creador"
@@ -230,15 +244,27 @@ def _obtain_text(
 
     stage("Preparando el audio para transcribir...")
     wav = core_audio.extract_wav_for_whisper(dl.audio_path, tmp / "whisper.wav")
-    stage("Transcribiendo...")
-    segments, language = transcribe.transcribe(
-        wav,
-        model=opts.model,
-        language=opts.language,
-        on_progress=on_progress,
-        on_info=info,
-        should_cancel=should_cancel,
-    )
+    if opts.diarize:
+        stage("Transcribiendo e identificando hablantes...")
+        segments, language = diarize.transcribe_and_diarize(
+            wav,
+            model=opts.model,
+            language=opts.language,
+            num_speakers=opts.num_speakers,
+            on_progress=on_progress,
+            on_info=info,
+            should_cancel=should_cancel,
+        )
+    else:
+        stage("Transcribiendo...")
+        segments, language = transcribe.transcribe(
+            wav,
+            model=opts.model,
+            language=opts.language,
+            on_progress=on_progress,
+            on_info=info,
+            should_cancel=should_cancel,
+        )
     return segments, TextSource.TRANSCRIBED, language
 
 

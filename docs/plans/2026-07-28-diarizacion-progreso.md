@@ -31,7 +31,7 @@ archivo primero y sigue con el bloque pendiente.
 
 - [x] **Bloque A — Motor (core)** · tareas A1–A5
 - [x] **Bloque B — CLI** · tarea B1
-- [ ] **Bloque C — Online** · tareas C1–C3 (C1 ✅ adelantada en Bloque B; faltan C2, C3)
+- [x] **Bloque C — Online** · tareas C1–C3
 - [ ] **Bloque D — GUI** · tareas D1–D2
 - [ ] **Bloque E — Dependencias y docs** · tareas E1–E2
 - [ ] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
@@ -51,6 +51,8 @@ archivo primero y sigue con el bloque pendiente.
 **C — Online**
 - [x] C1 `OnlineJobOptions.diarize`/`num_speakers` (`online/models.py`) — adelantada
   en Bloque B (el `url` de B1 la necesita para no reventar; ver Log)
+- [x] C2 Enrutar `online/runner._obtain_text` (diarize ignora subs, diariza audio)
+- [x] C3 Propagar `diarize`/`num_speakers` en `run_playlist`
 - [ ] C2 Enrutar `online/runner._obtain_text`
 - [ ] C3 Propagar `diarize`/`num_speakers` en `run_playlist`
 
@@ -92,3 +94,9 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   C3 propagación en playlist):** hoy `tae url --diarize` acepta la bandera pero el
   runner online aún no diariza (usa la transcripción de siempre). `ruff` limpio,
   `pytest` 79/79. `--help` de ambos muestra las flags.
+- 2026-07-28 · Bloque C (online) · C2: `online/runner._obtain_text` enruta a
+  `diarize.transcribe_and_diarize` cuando `opts.diarize` (ignora subs del creador,
+  avisa). C3: `run_playlist` propaga `diarize`/`num_speakers` a cada `entry_opts`
+  (un fallo de diarización en un video se clasifica sin abortar el lote, por el
+  try/except existente). C1 ya venía del Bloque B. Import diferido intacto:
+  `online.runner` no carga whisperx ni gui. `ruff` limpio, `pytest` 79/79.
