@@ -91,8 +91,10 @@ video (local | YouTube/online)
   `tae local`/`tae url`, playlists en lote, GUI con campo URL. `pytest` 55/55,
   `ruff` limpio. Red real verificada (caso 1 subs del creador + caso 2/3
   force-transcribe con "Me at the zoo"). Ver P5 en `docs/pendientes.md`.
-- ⏳ Falta: prueba manual de la GUI con voz real (P4) y una playlist real con fallo
-  end-to-end (caso 4; lógica ya cubierta por unit test).
+- ✅ GUI verificada end-to-end (2026-07-27): voz real → Whisper GPU (P4), carga por
+  diálogo y por **drag-and-drop** (P4), y playlist real con fallo clasificado sin
+  abortar el lote (caso 4, P5). Ver P4/P5 en `docs/pendientes.md`. En el camino se
+  cerraron bugs de parseo VTT (P7), cookies/runtime JS (P8) y `live_chat.json` (P9).
 
 ## Flujo y verificación
 

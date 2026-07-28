@@ -1,7 +1,7 @@
 # Roadmap — TextAudioExtractor
 
 Creado: 2026-07-26
-Actualizado: 2026-07-26 (Fase 4 implementada)
+Actualizado: 2026-07-27 (MVP + módulo online verificados end-to-end en la GUI)
 
 ## Visión
 
@@ -12,14 +12,17 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
 ## Fases
 
 - **Fase 0 — Andamiaje** ✅ CLAUDE.md + docs/ + git local.
-- **Fase 1 — Spec** ⏳ Spec formal del motor + GUI con `k-design-specs`. Approval
-  gate: no se implementa hasta que Kike apruebe.
-- **Fase 2 — Motor (core)** Detección de subtítulos, extracción de audio,
-  transcripción local, salidas (texto plano, `.srt`, audio). Probado como CLI.
-- **Fase 3 — GUI delgada** Arrastrar video → elegir salidas → progreso.
+- **Fase 1 — Spec** ✅ Spec formal del motor + GUI aprobado (P1). Decidido:
+  faster-whisper + PySide6.
+- **Fase 2 — Motor (core)** ✅ Detección de subtítulos, extracción de audio,
+  transcripción local, salidas (texto plano, `.srt`, audio). Probado como CLI y
+  por tests (P3).
+- **Fase 3 — GUI delgada** ✅ Arrastrar video (drag-and-drop verificado) → elegir
+  salidas → progreso. Verificada end-to-end con voz real en GPU (P4).
 - **Fase 4 — Módulo online** ✅ YouTube/plataformas vía `yt-dlp`. Paquete aislado
   `src/tae/online/`, subcomandos `tae local`/`tae url`, playlists en lote, GUI con
-  campo URL. Ver P5 en `docs/pendientes.md`.
+  campo URL. Verificado end-to-end en la GUI, incl. cookies y caso de fallo de
+  lote. Ver P5 en `docs/pendientes.md`.
 
 ## Decisiones tomadas (brainstorm 2026-07-26)
 
