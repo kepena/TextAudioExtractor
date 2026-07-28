@@ -4,10 +4,17 @@ from pathlib import Path
 
 import pytest
 
+from tae.core import pipeline as pipeline_mod
 from tae.core.audio import extract_audio
 from tae.core.errors import NoAudioTrack
 from tae.core.ffmpeg_utils import find_ffmpeg, run
-from tae.core.models import JobOptions
+from tae.core.models import (
+    JobOptions,
+    ProbeResult,
+    Segment,
+    SubtitleTrack,
+    TextSource,
+)
 from tae.core.pipeline import run as run_pipeline
 from tae.core.probe import probe
 
@@ -77,3 +84,88 @@ def test_pipeline_audio_en_video_mudo_falla_claro(tmp_path):
     )
     with pytest.raises(NoAudioTrack):
         run_pipeline(opts)
+
+
+# --- Enrutado de diarizacion (sin ejecutar whisperx real: se monkeypatchea) ---
+
+
+@skip_no_ffmpeg
+def test_pipeline_diarize_enruta_a_diarize_no_a_transcribe(tmp_path, monkeypatch):
+    """Con diarize=True se llama a diarize.transcribe_and_diarize, no a transcribe,
+    y las salidas salen con etiqueta de hablante."""
+    called = {"diarize": False, "transcribe": False}
+
+    def fake_diarize(audio, **kw):
+        called["diarize"] = True
+        assert kw.get("num_speakers") == 2  # se propaga el nº de hablantes
+        return [Segment(0.0, 1.0, "hola", speaker="SPEAKER_00")], "es"
+
+    def fake_transcribe(audio, **kw):
+        called["transcribe"] = True
+        return [Segment(0.0, 1.0, "hola")], "es"
+
+    monkeypatch.setattr(pipeline_mod.diarize, "transcribe_and_diarize", fake_diarize)
+    monkeypatch.setattr(pipeline_mod.transcribe, "transcribe", fake_transcribe)
+
+    video = _make_video(tmp_path / "clip.mp4", with_audio=True)
+    opts = JobOptions(
+        video=video,
+        out_dir=tmp_path / "out",
+        want_txt=True,
+        want_srt=True,
+        want_audio=False,
+        diarize=True,
+        num_speakers=2,
+    )
+    result = run_pipeline(opts)
+    assert called["diarize"] and not called["transcribe"]
+    assert result.text_source == TextSource.TRANSCRIBED
+    srt = result.srt_path.read_text(encoding="utf-8")
+    assert "SPEAKER_00: hola" in srt
+
+
+@skip_no_ffmpeg
+def test_pipeline_diarize_sin_audio_falla_claro(tmp_path):
+    """--diarize sobre un video sin audio da NoAudioTrack con mensaje de diarizar."""
+    video = _make_video(tmp_path / "mudo.mp4", with_audio=False)
+    opts = JobOptions(
+        video=video,
+        out_dir=tmp_path / "out",
+        want_txt=True,
+        want_srt=True,
+        diarize=True,
+    )
+    with pytest.raises(NoAudioTrack) as exc:
+        run_pipeline(opts)
+    assert "diarizar" in str(exc.value).lower()
+
+
+def test_obtain_text_diarize_ignora_subtitulos(tmp_path, monkeypatch):
+    """Con subtitulos presentes + diarize, se ignora la rama embedded y se transcribe.
+
+    Unit test puro del arbol de decision: no necesita ffmpeg, ni GPU, ni token.
+    """
+    def boom(*a, **k):  # extract_subtitles NO debe llamarse si diarize esta activo
+        raise AssertionError("no debe usar la rama de subtitulos incrustados")
+
+    monkeypatch.setattr(
+        pipeline_mod.diarize,
+        "transcribe_and_diarize",
+        lambda audio, **kw: ([Segment(0.0, 1.0, "x", speaker="SPEAKER_00")], "es"),
+    )
+    monkeypatch.setattr(pipeline_mod.subtitles, "extract_subtitles", boom)
+    monkeypatch.setattr(
+        pipeline_mod.audio_mod, "extract_wav_for_whisper", lambda src, dst: dst
+    )
+
+    info_probe = ProbeResult(
+        duration=1.0,
+        has_audio=True,
+        subtitle_tracks=[SubtitleTrack(index=0, language="es", codec="mov_text")],
+    )
+    opts = JobOptions(video=tmp_path / "x.mp4", out_dir=tmp_path, diarize=True)
+    segments, source, language = pipeline_mod._obtain_text(
+        opts, info_probe, lambda m: None, lambda m: None, None, None
+    )
+    assert source == TextSource.TRANSCRIBED
+    assert segments[0].speaker == "SPEAKER_00"

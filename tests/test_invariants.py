@@ -56,3 +56,25 @@ def test_core_subtitles_sigue_exportando_api_previa():
     assert hasattr(subtitles, "parse_srt")
     assert hasattr(subtitles, "extract_subtitles")
     assert hasattr(subtitles, "parse_vtt")  # el aditivo de esta fase
+
+
+def test_invariante_diarize_import_diferido_whisperx():
+    """Importar core.diarize NO debe cargar whisperx (import diferido, invariante 5)."""
+    code = (
+        "import sys; import tae.core.diarize;"
+        "assert 'whisperx' not in sys.modules, 'core.diarize importo whisperx en el modulo';"
+        "print('ok')"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_invariante4_diarize_no_importa_gui():
+    """core.diarize no debe arrastrar PySide6 (invariante 4)."""
+    code = (
+        "import sys; import tae.core.diarize;"
+        "assert 'PySide6' not in sys.modules, 'core.diarize importo PySide6';"
+        "print('ok')"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr

@@ -34,7 +34,7 @@ archivo primero y sigue con el bloque pendiente.
 - [x] **Bloque C — Online** · tareas C1–C3
 - [x] **Bloque D — GUI** · tareas D1–D2
 - [x] **Bloque E — Dependencias y docs** · tareas E1–E2
-- [ ] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
+- [x] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
 
 ### Detalle por tarea (marcar al cerrar)
 
@@ -65,9 +65,9 @@ archivo primero y sigue con el bloque pendiente.
 - [x] E2 Sección "Diarización de hablantes" con setup del token HF (`README.md`)
 
 **F — Tests**
-- [ ] F1 Salidas con hablante (`tests/test_outputs.py`)
-- [ ] F2 Enrutado con monkeypatch, sin GPU/token (`tests/test_pipeline_media.py`)
-- [ ] F3 Invariantes: import diferido + core sin GUI (`tests/test_invariants.py`)
+- [x] F1 Salidas con hablante (`tests/test_outputs.py`)
+- [x] F2 Enrutado con monkeypatch, sin GPU/token (`tests/test_pipeline_media.py`)
+- [x] F3 Invariantes: import diferido + core sin GUI (`tests/test_invariants.py`)
 
 ## Criterio de "terminado" global
 
@@ -113,3 +113,12 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   aceptar términos pyannote, token HF en `HF_TOKEN`/`HUGGINGFACE_TOKEN`, nada a la
   nube en runtime), filas `--diarize`/`--speakers` en la tabla y "fuera de alcance"
   actualizado. `pyproject.toml` parsea, `ruff` limpio, `pytest` 79/79.
+- 2026-07-28 · Bloque F (tests) · F1: salidas con hablante en `test_outputs.py`
+  (prefijo en `.srt`/`.txt`, línea en blanco solo al cambiar, candado "sin speaker =
+  igual"). F2: enrutado en `test_pipeline_media.py` con monkeypatch de
+  `diarize.transcribe_and_diarize` (diarize→diarize no transcribe + salida con
+  etiqueta; `--diarize` sin audio→`NoAudioTrack`; unit puro de `_obtain_text` que
+  ignora subtítulos con diarize, sin ffmpeg/GPU/token). F3: invariantes en
+  `test_invariants.py` (importar `core.diarize` no carga whisperx ni PySide6).
+  `ruff` limpio, `pytest` **87/87** (+8). **Todos los bloques A–F ✅.** Falta solo
+  F4 = verificación real con GPU + token HF, en `k-verify-after-changes`.
