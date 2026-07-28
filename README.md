@@ -64,6 +64,8 @@ Opciones comunes:
 | `--model medium` | `tiny`/`base`/`small`/`medium`/`large-v3` (velocidad vs precisión). |
 | `--out DIR` | Carpeta de salida. Local: `<carpeta del video>/<nombre>`. URL: carpeta actual. |
 | `--audio-format mp3` | `mp3`/`m4a`/`wav`/`flac`. |
+| `--diarize` | Identificar hablantes (ver sección abajo). Fuerza transcribir el audio. |
+| `--speakers N` | Nº de hablantes si se conoce (ej. `2`). Por defecto, autodetección. |
 
 Solo para `tae url`:
 
@@ -76,6 +78,49 @@ Si la URL es una **playlist**, se procesa en lote: cada video sale con prefijo
 `NN_`, y al final se imprime un resumen con los éxitos y los fallos (con su causa:
 privado, geobloqueo, borrado, etc.). Un video que falle no aborta el resto.
 
+## Diarización de hablantes
+
+Con `--diarize` (CLI) o el checkbox **"Identificar hablantes"** (GUI), la
+transcripción separa **quién** habla: cada intervención sale prefijada con una
+etiqueta genérica (`SPEAKER_00`, `SPEAKER_01`, …) en el `.srt` y el `.txt`. Útil
+para sesiones 1-a-1 y entrevistas. Está **apagado por defecto**: sin el flag, la app
+se comporta igual que siempre.
+
+Como la identidad de voz sólo está en el audio, `--diarize` **transcribe el audio
+aunque haya subtítulos** (los ignora y avisa). Todo corre local; el token de
+HuggingFace de abajo sólo autoriza la **descarga inicial** de los modelos de
+diarización — en runtime nada sale a la nube.
+
+### Puesta a punto (una vez)
+
+1. **Instala el extra** (arrastra torch y pyannote, es una descarga grande):
+
+   ```bash
+   uv sync --extra diarize
+   ```
+
+2. **Acepta los términos** de los modelos pyannote en HuggingFace (cuenta gratuita):
+   - https://huggingface.co/pyannote/speaker-diarization-3.1
+   - https://huggingface.co/pyannote/segmentation-3.0
+
+3. **Crea un token** de acceso gratuito en
+   https://huggingface.co/settings/tokens y expórtalo como variable de entorno:
+
+   ```bash
+   # PowerShell (Windows)
+   $env:HF_TOKEN = "hf_xxxxxxxxxxxxxxxxxxxx"
+   ```
+
+   La app también acepta `HUGGINGFACE_TOKEN`.
+
+Si falta el extra o el token, `--diarize` da un **mensaje claro** con estos pasos, no
+un traceback. Sin GPU NVIDIA corre en CPU con aviso (es notablemente lento).
+
+```bash
+# Terapia de 2 voces, número de hablantes conocido
+uv run tae local "sesion.mp4" --diarize --speakers 2
+```
+
 ## Desarrollo
 
 ```bash
@@ -87,5 +132,5 @@ Estructura y decisiones en `CLAUDE.md`, `docs/specs/` y `docs/plans/`.
 
 ## Fuera de alcance (por ahora)
 
-Edición de video, transcripción en la nube, traducción automática y diarización de
-hablantes.
+Edición de video, transcripción en la nube y traducción automática. (La diarización
+de hablantes ya está soportada — ver sección arriba.)

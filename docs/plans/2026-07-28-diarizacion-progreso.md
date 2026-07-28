@@ -33,7 +33,7 @@ archivo primero y sigue con el bloque pendiente.
 - [x] **Bloque B — CLI** · tarea B1
 - [x] **Bloque C — Online** · tareas C1–C3
 - [x] **Bloque D — GUI** · tareas D1–D2
-- [ ] **Bloque E — Dependencias y docs** · tareas E1–E2
+- [x] **Bloque E — Dependencias y docs** · tareas E1–E2
 - [ ] **Bloque F — Tests** · tareas F1–F3 (F4 = verificación real, va en k-verify)
 
 ### Detalle por tarea (marcar al cerrar)
@@ -61,8 +61,8 @@ archivo primero y sigue con el bloque pendiente.
 - [x] D2 Cablear a `JobOptions` y `OnlineJobOptions` (`_start` / `_start_online`)
 
 **E — Deps y docs**
-- [ ] E1 Extra opcional `diarize = ["whisperx"]` (`pyproject.toml`)
-- [ ] E2 Sección "Diarización de hablantes" con setup del token HF (`README.md`)
+- [x] E1 Extra opcional `diarize = ["whisperx"]` (`pyproject.toml`)
+- [x] E2 Sección "Diarización de hablantes" con setup del token HF (`README.md`)
 
 **F — Tests**
 - [ ] F1 Salidas con hablante (`tests/test_outputs.py`)
@@ -106,3 +106,10 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   y `_start_online` pasan `diarize`/`num_speakers` a `JobOptions`/`OnlineJobOptions`
   (helper `_speakers_value`, 0→None). Invariante 4 verificado: importar `tae.gui.app`
   no carga whisperx. `ruff` limpio, `pytest` 79/79.
+- 2026-07-28 · Bloque E (deps + docs) · E1: extra opcional
+  `[project.optional-dependencies] diarize = ["whisperx>=3.1"]` en `pyproject.toml`
+  (no toca las deps duras; `uv sync` sin el extra deja el proyecto como hoy). E2:
+  sección "Diarización de hablantes" en `README.md` (setup: `uv sync --extra diarize`,
+  aceptar términos pyannote, token HF en `HF_TOKEN`/`HUGGINGFACE_TOKEN`, nada a la
+  nube en runtime), filas `--diarize`/`--speakers` en la tabla y "fuera de alcance"
+  actualizado. `pyproject.toml` parsea, `ruff` limpio, `pytest` 79/79.

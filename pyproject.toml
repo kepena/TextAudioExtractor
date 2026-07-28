@@ -13,6 +13,12 @@ dependencies = [
     "nvidia-cudnn-cu12>=9.1.0; platform_system == 'Windows'",
 ]
 
+[project.optional-dependencies]
+# Diarizacion de hablantes (opt-in, `--diarize`). Extra pesado: arrastra torch y
+# pyannote via whisperX. Import diferido en core/diarize.py; sin este extra el
+# resto de la app funciona igual y `--diarize` da un error de setup claro.
+diarize = ["whisperx>=3.1"]
+
 [project.scripts]
 tae = "tae.cli:app"
 
