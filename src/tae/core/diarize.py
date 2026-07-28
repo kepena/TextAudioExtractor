@@ -29,7 +29,15 @@ from .errors import (
     DiarizationUnavailable,
 )
 from .models import Segment
-from .transcribe import _add_cuda_dll_dirs, detect_device
+from .transcribe import _add_cuda_dll_dirs
+
+# Modelo de diarizacion. `None` = usar el default del whisperX instalado (en las
+# versiones nuevas es `pyannote/speaker-diarization-community-1`). No se fija el 3.1
+# porque su pipeline, con las versiones nuevas de pyannote, termina jalando assets
+# del community-1 igual: fijarlo no evitaba aceptar ese modelo. El mensaje de setup
+# incluye la URL exacta que reporte pyannote, asi que el usuario siempre sabe cual
+# aceptar aunque el default cambie entre versiones.
+_DIARIZATION_MODEL: str | None = None
 
 
 def _hf_token() -> str | None:
@@ -41,13 +49,55 @@ def _hf_token() -> str | None:
     return None
 
 
+def _torch_device() -> tuple[str, str]:
+    """(device, compute_type) segun la CUDA que ve *torch* (backend de whisperX).
+
+    NO se reutiliza `transcribe.detect_device()`: aquel mide la CUDA de ctranslate2
+    (faster-whisper), y whisperX corre sobre torch. El build de torch puede ser
+    CPU-only aunque ctranslate2 vea la GPU (p. ej. `torch==2.x+cpu`); mezclar las
+    dos señales hace que whisperX intente mover modelos a 'cuda' con un torch sin
+    CUDA y reviente. Aqui degradamos a CPU si torch no tiene CUDA (invariante 3).
+    """
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda", "float16"
+    except Exception:
+        pass
+    return "cpu", "int8"
+
+
+def _terms_hint(exc: Exception) -> str:
+    """Extrae del error de pyannote las lineas utiles (URL del modelo a aceptar).
+
+    pyannote imprime un bloque con 'visit https://hf.co/... to accept user
+    conditions'. Devolvemos solo esas lineas para que el mensaje de setup lleve la
+    URL exacta, sin volcar el traceback completo.
+    """
+    lines = [
+        ln.strip()
+        for ln in str(exc).splitlines()
+        if ("hf.co" in ln or "huggingface.co" in ln or "accept" in ln.lower())
+        and "token=" not in ln  # no repetir la linea de ejemplo con el token
+    ]
+    return "\n".join(dict.fromkeys(lines)) if lines else ""
+
+
 def _looks_like_terms_error(exc: Exception) -> bool:
     """Heuristica: ¿el fallo es por terminos no aceptados / token invalido?
 
     pyannote/HuggingFace no exponen un tipo de excepcion estable para esto; el
     fallo llega como HTTP 401/403 o mensajes de 'gated'/'access'. Lo mapeamos a
     `DiarizationSetupError` para no soltar el traceback crudo.
+
+    Los errores de *codigo* (TypeError, AttributeError, etc.) NO son fallos de
+    setup: mapearlos a `DiarizationSetupError` esconderia un bug real detras de un
+    mensaje de "falta el token". Se excluyen aunque el texto case algun termino
+    (p. ej. un `TypeError` que menciona `use_auth_token`).
     """
+    if isinstance(exc, (TypeError, AttributeError, NameError, KeyError, IndexError, ValueError)):
+        return False
     text = f"{type(exc).__name__} {exc}".lower()
     needles = (
         "401",
@@ -96,7 +146,7 @@ def transcribe_and_diarize(
     if not token:
         raise DiarizationSetupError()
 
-    device, compute_type = detect_device()
+    device, compute_type = _torch_device()
     if on_info:
         if device == "cuda":
             on_info(f"Diarizando en GPU (modelo {model}).")
@@ -161,7 +211,7 @@ def transcribe_and_diarize(
         raise
     except Exception as exc:
         if _looks_like_terms_error(exc):
-            raise DiarizationSetupError() from exc
+            raise DiarizationSetupError(detail=_terms_hint(exc)) from exc
         raise
 
     result = whisperx.assign_word_speakers(diarize_segments, aligned)
@@ -186,10 +236,25 @@ def transcribe_and_diarize(
 def _make_diarization_pipeline(whisperx, token: str, device: str):
     """Construye el pipeline de diarizacion tolerando variantes de la API whisperX.
 
-    Segun la version, `DiarizationPipeline` vive en `whisperx` o en
-    `whisperx.diarize`. Un fallo por terminos/token se mapea arriba.
+    Dos ejes de variacion entre versiones:
+    - Ubicacion: `DiarizationPipeline` vive en `whisperx` o en `whisperx.diarize`.
+    - Nombre del argumento del token: las versiones nuevas (>=3.4) usan `token=`;
+      las viejas usaban `use_auth_token=`. Se elige por la firma real para no
+      reventar con un `TypeError` de argumento inesperado.
     """
+    import inspect
+
     pipeline_cls = getattr(whisperx, "DiarizationPipeline", None)
     if pipeline_cls is None:
         from whisperx.diarize import DiarizationPipeline as pipeline_cls  # type: ignore
-    return pipeline_cls(use_auth_token=token, device=device)
+
+    params = inspect.signature(pipeline_cls.__init__).parameters
+    kwargs: dict = {"device": device}
+    if "model_name" in params and _DIARIZATION_MODEL is not None:
+        kwargs["model_name"] = _DIARIZATION_MODEL
+    if "token" in params:
+        return pipeline_cls(token=token, **kwargs)
+    if "use_auth_token" in params:
+        return pipeline_cls(use_auth_token=token, **kwargs)
+    # Ultimo recurso: token como primer argumento posicional del constructor.
+    return pipeline_cls(token, device=device)

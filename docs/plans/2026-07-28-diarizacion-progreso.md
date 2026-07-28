@@ -72,8 +72,8 @@ archivo primero y sigue con el bloque pendiente.
 ## Criterio de "terminado" global
 
 Todos los bloques ✅, `pytest` en verde, `ruff` limpio, y el flujo sin `--diarize`
-sin cambios de comportamiento. Después → `k-verify-after-changes` (bloque F4: corrida
-real con GPU + token HF).
+sin cambios de comportamiento. **F4 (k-verify) cerrado en verde** el 2026-07-28:
+diarización real de 2 voces verificada end-to-end (ver Log). P10 completo.
 
 ## Log de sesiones
 
@@ -122,3 +122,20 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
   `test_invariants.py` (importar `core.diarize` no carga whisperx ni PySide6).
   `ruff` limpio, `pytest` **87/87** (+8). **Todos los bloques A–F ✅.** Falta solo
   F4 = verificación real con GPU + token HF, en `k-verify-after-changes`.
+- 2026-07-28 · k-verify (F4) · Corrida real end-to-end en CPU con token HF y audio
+  sintético de 2 voces (SAPI David/Zira). Resultado: **2 `SPEAKER_xx` coherentes**,
+  cada voz a su etiqueta, `--speakers 2` respetado, `.srt`/`.txt` con formato del
+  spec §5. También verificados en vivo: token ausente→`DiarizationSetupError`,
+  video sin audio + `--diarize`→`NoAudioTrack`, regresión sin `--diarize`. La corrida
+  destapó y se arreglaron **3 bugs** (todos en esta fase, no commiteados aún hasta
+  cerrar verde):
+    1. `detect_device()` medía CUDA de ctranslate2, no de torch → whisperX intentaba
+       CUDA con torch CPU-only y reventaba con traceback. Fix: `_torch_device()`.
+    2. `use_auth_token=` ya no existe en whisperX 3.4 (`TypeError`), y la heurística
+       de términos lo tragaba como "falta token". Fix: constructor elige el kwarg por
+       la firma; la heurística ya no mapea `TypeError`/errores de código.
+    3. El default del stack es `speaker-diarization-community-1`, no el 3.1; el
+       mensaje de setup nombraba modelos equivocados. Fix: mensaje genérico + adjunta
+       la URL exacta del error crudo de pyannote; README apunta a community-1.
+  Se añadieron 5 tests que blindan los 3 fixes (`tests/test_diarize.py`).
+  `ruff` limpio, `pytest` **92/92**. **P10 listo end-to-end.**

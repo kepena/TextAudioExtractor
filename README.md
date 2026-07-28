@@ -99,9 +99,12 @@ diarización — en runtime nada sale a la nube.
    uv sync --extra diarize
    ```
 
-2. **Acepta los términos** de los modelos pyannote en HuggingFace (cuenta gratuita):
-   - https://huggingface.co/pyannote/speaker-diarization-3.1
-   - https://huggingface.co/pyannote/segmentation-3.0
+2. **Acepta los términos** del modelo de diarización de pyannote en HuggingFace
+   (cuenta gratuita). Con las versiones actuales de whisperX el modelo por defecto es:
+   - https://huggingface.co/pyannote/speaker-diarization-community-1
+
+   Si tu versión usa otro modelo gated, la app te dice la **URL exacta** a aceptar en
+   el mensaje de error (no un traceback).
 
 3. **Crea un token** de acceso gratuito en
    https://huggingface.co/settings/tokens y expórtalo como variable de entorno:

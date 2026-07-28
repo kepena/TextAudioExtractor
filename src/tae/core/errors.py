@@ -61,19 +61,21 @@ class DiarizationSetupError(TaeError):
     diarizar; se avisa con instrucciones (invariante 5), sin traceback.
     """
 
-    def __init__(
-        self,
-        message: str = (
-            "No pude configurar la diarizacion. Para identificar hablantes:\n"
-            "  1. Crea una cuenta gratis en https://huggingface.co y genera un "
-            "token de acceso en https://huggingface.co/settings/tokens\n"
-            "  2. Acepta los terminos de los modelos "
-            "https://huggingface.co/pyannote/speaker-diarization-3.1 y "
-            "https://huggingface.co/pyannote/segmentation-3.0\n"
-            "  3. Exporta el token en la variable de entorno HF_TOKEN "
-            "(o HUGGINGFACE_TOKEN) y vuelve a intentarlo.\n"
-            "En runtime nada sale a la nube: el token solo autoriza la descarga "
-            "inicial de los pesos."
-        ),
-    ) -> None:
-        super().__init__(message)
+    _BASE = (
+        "No pude configurar la diarizacion. Para identificar hablantes:\n"
+        "  1. Crea una cuenta gratis en https://huggingface.co y genera un "
+        "token de acceso en https://huggingface.co/settings/tokens\n"
+        "  2. Acepta los terminos del modelo de diarizacion de pyannote (la URL "
+        "exacta que uses aparece abajo si el fallo fue por terminos; suele ser "
+        "https://huggingface.co/pyannote/speaker-diarization-community-1).\n"
+        "  3. Exporta el token en la variable de entorno HF_TOKEN "
+        "(o HUGGINGFACE_TOKEN) y vuelve a intentarlo.\n"
+        "En runtime nada sale a la nube: el token solo autoriza la descarga "
+        "inicial de los pesos."
+    )
+
+    def __init__(self, message: str | None = None, *, detail: str | None = None) -> None:
+        text = message or self._BASE
+        if detail:
+            text = f"{text}\n\nDetalle de pyannote:\n{detail.strip()}"
+        super().__init__(text)

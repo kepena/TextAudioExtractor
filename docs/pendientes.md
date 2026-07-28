@@ -109,11 +109,14 @@ léela primero.**
   los sidecars (json/miniaturas/…) y quedarse con el archivo más grande (el medio
   real pesa MB). Verificado en vivo: "Hensonn-Sahara" (que fallaba) ahora genera su
   mp3. `pytest` 60/60 (+3 tests), `ruff` limpio.
-- **P10** 🔨 Diarización de hablantes (Camino C, whisperX). Brainstorm + spec + plan
-  hechos (2026-07-28): opt-in `--diarize`/checkbox, whisperX solo con el flag,
-  `Segment.speaker`, salidas `SPEAKER_00:`, `--speakers N`, whisperx como extra
-  opcional + token HF de setup, degradar sin GPU. Spec:
-  `docs/specs/2026-07-28-diarizacion-hablantes.md`. Plan:
-  `docs/plans/2026-07-28-diarizacion-hablantes.md`. **Ejecución por sesiones en
-  bloques A→F:** seguir `docs/plans/2026-07-28-diarizacion-progreso.md` (tablero
-  vivo). Falta implementar y verificar (k-verify con GPU + token).
+- **P10** ✅ Diarización de hablantes (Camino C, whisperX). Opt-in `--diarize`/checkbox,
+  whisperX solo con el flag, `Segment.speaker`, salidas `SPEAKER_00:`, `--speakers N`,
+  whisperx como extra opcional + token HF de setup, degradar sin GPU. Implementado en
+  bloques A→F (ver `docs/plans/2026-07-28-diarizacion-progreso.md`) y **verificado
+  end-to-end (2026-07-28)**: audio real de 2 voces → 2 `SPEAKER_xx` coherentes,
+  `--speakers 2` respetado, formato spec §5. En k-verify se destaparon y arreglaron 3
+  bugs de integración con whisperX 3.4 (device desde torch, kwarg `token=` del
+  constructor, modelo por defecto `speaker-diarization-community-1`). Nota de setup:
+  el `--extra diarize` instala torch **CPU-only**, así que la diarización corre en CPU
+  aunque faster-whisper use GPU; para GPU en diarización haría falta el torch CUDA
+  (pendiente menor, no bloquea). `pytest` 92/92, `ruff` limpio.
