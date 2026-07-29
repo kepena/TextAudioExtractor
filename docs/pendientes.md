@@ -119,4 +119,23 @@ léela primero.**
   constructor, modelo por defecto `speaker-diarization-community-1`). Nota de setup:
   el `--extra diarize` instala torch **CPU-only**, así que la diarización corre en CPU
   aunque faster-whisper use GPU; para GPU en diarización haría falta el torch CUDA
-  (pendiente menor, no bloquea). `pytest` 92/92, `ruff` limpio.
+  (pendiente menor, no bloquea). `pytest` 92/92, `ruff` limpio. Ver P11 para el torch CUDA.
+- **P11** ⛔ Torch CUDA para diarización en GPU — **intentado y revertido
+  (2026-07-29): bloqueado en Windows por `k2`.** El `--extra diarize` resuelve
+  `torch` a la rueda **CPU-only** (`+cpu`), así que whisperX diariza en CPU (lento,
+  ~130 s para 28 s de audio) aunque la RTX 4050 la use faster-whisper. Se probó
+  fijar torch/torchaudio/torchvision al índice CUDA de PyTorch (`cu128`) vía
+  `[tool.uv.sources]` + `[[tool.uv.index]]`. `_torch_device()` pasó a `cuda` y se
+  destaparon (y en su momento se arreglaron) dos incompatibilidades de la cadena
+  CUDA: (a) `torch.load` con `weights_only=True` por defecto en torch≥2.6 rompe los
+  checkpoints de pyannote/VAD → se necesita forzar `weights_only=False`; (b) **la
+  rueda `torchaudio 2.8+cu128`, al detectar CUDA, enruta por un decoder que importa
+  `k2`**, y `k2` no tiene ruedas para Windows (se compila desde fuente con CUDA,
+  inviable en la práctica). La rueda `torchaudio +cpu` no toca `k2`, por eso el
+  camino CPU funciona. Como whisperX 3.8 fija `torch~=2.8`, no se puede bajar torch
+  sin bajar whisperX. **Estado: revertido al stack CPU commiteado (verificado en
+  verde, 2 voces coherentes).** Opciones si se retoma: (1) fijar un combo más viejo
+  `whisperX<3.4` + `torch 2.6+cu124` (preda el problema de `k2`/`weights_only`),
+  re-resolviendo todo; (2) correr la diarización bajo **WSL2** (Linux tiene ruedas
+  de `k2`); (3) aceptar CPU para diarización (transcripción sigue en GPU). No
+  bloquea P10.
