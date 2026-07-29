@@ -134,8 +134,18 @@ léela primero.**
   inviable en la práctica). La rueda `torchaudio +cpu` no toca `k2`, por eso el
   camino CPU funciona. Como whisperX 3.8 fija `torch~=2.8`, no se puede bajar torch
   sin bajar whisperX. **Estado: revertido al stack CPU commiteado (verificado en
-  verde, 2 voces coherentes).** Opciones si se retoma: (1) fijar un combo más viejo
-  `whisperX<3.4` + `torch 2.6+cu124` (preda el problema de `k2`/`weights_only`),
-  re-resolviendo todo; (2) correr la diarización bajo **WSL2** (Linux tiene ruedas
-  de `k2`); (3) aceptar CPU para diarización (transcripción sigue en GPU). No
-  bloquea P10.
+  verde, 2 voces coherentes).**
+  - **Opción 1 (combo viejo whisperX 3.1.1 + torch 2.2.2+cu121) — PROBADA en venv
+    aislado el 2026-07-29: NO funciona.** torch cu121 instala y CUDA se detecta,
+    pero whisperX 3.1.1 está **yanked** (build no oficial de terceros) y exige
+    resucitar todo su ecosistema de época (numpy<2, transformers 4.36/4.39,
+    pyannote 3.1.1). Con ese set, `transformers` revienta al importar por la
+    combinación de deps opcionales de pyannote (scipy/librosa presentes,
+    essentia/pretty_midi no) → `ImportError` del dummy de Pop2Piano, reproducible en
+    venv limpio con 4.36.2 y 4.39.3. Callejón sin salida; no se adopta un paquete
+    yanked con deps obsoletas en el repo.
+  - **Opción 2 (WSL2) — camino GPU recomendado si se retoma.** En Linux hay ruedas
+    de `k2`, así que el stack **moderno** actual (whisperX 3.8 + torch cu128)
+    correría en GPU sin bajar nada ni tocar paquetes yanked.
+  - **Opción 3 (CPU) — estado actual.** Diarización en CPU (funciona y verificada);
+    la transcripción sigue en GPU. No bloquea P10.
