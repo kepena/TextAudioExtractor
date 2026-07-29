@@ -1,7 +1,7 @@
 # Roadmap — TextAudioExtractor
 
 Creado: 2026-07-26
-Actualizado: 2026-07-27 (MVP + módulo online verificados end-to-end en la GUI)
+Actualizado: 2026-07-29 (diarización de hablantes verificada end-to-end; GPU pendiente)
 
 ## Visión
 
@@ -23,9 +23,15 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
   `src/tae/online/`, subcomandos `tae local`/`tae url`, playlists en lote, GUI con
   campo URL. Verificado end-to-end en la GUI, incl. cookies y caso de fallo de
   lote. Ver P5 en `docs/pendientes.md`.
-- **Fase 5 — Diarización de hablantes** 🔨 Camino C (whisperX), opt-in `--diarize`.
-  Spec + plan aprobados (P10). Ejecución por bloques A→F en
-  `docs/plans/2026-07-28-diarizacion-progreso.md`.
+- **Fase 5 — Diarización de hablantes** ✅ Camino C (whisperX), opt-in `--diarize`
+  / `--speakers` y checkbox en la GUI. Etiquetas `SPEAKER_00:` en `.srt`/`.txt`,
+  whisperx como extra opcional + token HF de setup. Implementada por bloques A→F
+  (`docs/plans/2026-07-28-diarizacion-progreso.md`) y verificada end-to-end el
+  2026-07-29 (audio de 2 voces → 2 hablantes coherentes). Ver P10.
+  - **Diarización corre en CPU** (la transcripción sigue en GPU). GPU para la
+    diarización quedó bloqueado en Windows por `k2` (torchaudio CUDA) y el combo
+    viejo de whisperX es inviable (paquete yanked). Camino GPU realista si se
+    retoma: **WSL2**. Detalle y opciones descartadas en **P11**.
 
 ## Decisiones tomadas (brainstorm 2026-07-26)
 
