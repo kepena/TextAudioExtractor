@@ -149,3 +149,18 @@ léela primero.**
     correría en GPU sin bajar nada ni tocar paquetes yanked.
   - **Opción 3 (CPU) — estado actual.** Diarización en CPU (funciona y verificada);
     la transcripción sigue en GPU. No bloquea P10.
+- **P12** 🔨 Cancelar inmediato en la diarización. Hoy `should_cancel` solo se
+  consulta **entre etapas**; en la diarización las llamadas de whisperX
+  (transcribe/align/diarizar) son nativas y monolíticas, así que sobre un archivo
+  largo "Cancelar" queda pendiente hasta que termina la etapa en curso (verificado
+  en la prueba de GUI del 2026-07-29 con un video de 84 min). **Decidido con Kike
+  (opción A): correr el motor en un subproceso y matarlo al cancelar** — corte
+  inmediato y limpio, sin arriesgar el estado de torch/CUDA del proceso GUI
+  (opción B, `QThread.terminate()`, descartada por inestable). Las salidas ya van a
+  disco; solo hay que pasar progreso/etapas por una cola. Toca `gui/worker.py`
+  (y CLI si se quiere el mismo corte).
+  **Spec aprobado (2026-07-30):** `docs/specs/2026-07-30-cancelar-inmediato.md`
+  (GUI solo, todos los jobs, cerrar ventana cancela). **Plan:**
+  `docs/plans/2026-07-30-cancelar-inmediato.md` (módulo `gui/engine_process.py` +
+  puente `_EngineBridge` en `worker.py` + `freeze_support`/`closeEvent`). Falta
+  implementar y verificar.

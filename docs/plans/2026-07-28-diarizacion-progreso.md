@@ -139,3 +139,18 @@ _(cada sesión añade una línea: fecha · bloque · resultado · pytest/ruff)_
        la URL exacta del error crudo de pyannote; README apunta a community-1.
   Se añadieron 5 tests que blindan los 3 fixes (`tests/test_diarize.py`).
   `ruff` limpio, `pytest` **92/92**. **P10 listo end-to-end.**
+- 2026-07-29 · reconfirmación en frío (por CLI, audio sintético 2 voces SAPI
+  David/Helena, 21.8 s) · `ruff` limpio, `pytest` 92/92. Diarización real por CPU:
+  2 `SPEAKER_xx` coherentes (cada voz a su etiqueta), `--speakers 2` respetado,
+  `.srt`/`.txt` con formato spec §5 (~234 s CPU). Errores verificados en vivo: sin
+  token → mensaje de setup sin traceback; video sin audio + `--diarize` →
+  `NoAudioTrack`. Regresión sin `--diarize`: salida plana, cero etiquetas (~28 s).
+  Sin cambios de código ni commits. Pendiente de Kike: GUI visual, video real,
+  online con URL propia.
+- 2026-07-29 · GUI end-to-end (control de escritorio) · Corrida real desde la GUI
+  con `sesion_2voces.mp4` (0:23): checkbox "Identificar hablantes" ✓ + "Nº de
+  hablantes" = 2 → `.srt`/`.txt` con **2 `SPEAKER_xx` coherentes** (cada voz a su
+  etiqueta), formato spec §5. Confirmados también los defaults (checkbox
+  desmarcado / "Automatico") y el bloqueo de controles durante la corrida. Nota: al
+  cancelar sobre un archivo largo el corte no es inmediato (solo entre etapas) →
+  origina **P12**. Sin cambios de código.
