@@ -149,6 +149,13 @@ léela primero.**
     correría en GPU sin bajar nada ni tocar paquetes yanked.
   - **Opción 3 (CPU) — estado actual.** Diarización en CPU (funciona y verificada);
     la transcripción sigue en GPU. No bloquea P10.
+  - **Próximo paso (otra sesión):** arrancar con `k-brainstorming` para acotar el
+    enfoque WSL2 antes de spec. Preguntas abiertas: ¿se mueve toda la app a WSL2 o
+    solo la diarización corre en WSL2 con la GUI en Windows?; ¿cómo invoca la GUI de
+    Windows al motor en WSL2 (comando `wsl`, servicio, etc.) y cómo se cruza con el
+    subproceso de P12?; ¿vale la pena vs. seguir en CPU? Contexto técnico ya cerrado
+    arriba (k2 sin ruedas en Windows; en Linux sí; stack actual whisperX 3.8 + torch
+    cu128).
 - **P12** ✅ Cancelar inmediato (implementado y verificado 2026-07-30). La GUI corre
   el motor en un subproceso (`src/tae/gui/engine_process.py`, target `run_engine`) y
   el `QThread` pasó a ser un puente `_EngineBridge` que lee una cola y re-emite las
