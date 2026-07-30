@@ -78,3 +78,16 @@ def test_invariante4_diarize_no_importa_gui():
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
+
+
+def test_engine_process_sin_gui_ni_whisperx(monkeypatch):
+    """El target del subproceso (P12) importa core/online, nunca PySide6 ni whisperx
+    en tiempo de modulo: el hijo debe arrancar liviano y sin GUI."""
+    code = (
+        "import sys; import tae.gui.engine_process;"
+        "assert 'PySide6' not in sys.modules, 'engine_process importo PySide6';"
+        "assert 'whisperx' not in sys.modules, 'engine_process importo whisperx';"
+        "print('ok')"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr

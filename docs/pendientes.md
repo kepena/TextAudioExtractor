@@ -149,8 +149,20 @@ léela primero.**
     correría en GPU sin bajar nada ni tocar paquetes yanked.
   - **Opción 3 (CPU) — estado actual.** Diarización en CPU (funciona y verificada);
     la transcripción sigue en GPU. No bloquea P10.
-- **P12** 🔨 Cancelar inmediato en la diarización. Hoy `should_cancel` solo se
-  consulta **entre etapas**; en la diarización las llamadas de whisperX
+- **P12** ✅ Cancelar inmediato (implementado y verificado 2026-07-30). La GUI corre
+  el motor en un subproceso (`src/tae/gui/engine_process.py`, target `run_engine`) y
+  el `QThread` pasó a ser un puente `_EngineBridge` que lee una cola y re-emite las
+  señales Qt (`src/tae/gui/worker.py`); `cancel()` = `process.terminate()`. Arranque
+  `spawn` seguro (`freeze_support` + `set_start_method` en `app.py`) y `closeEvent`
+  que mata el subproceso. Temporales del motor redirigidos a un `job_tmp` que el
+  puente borra (core sin tocar). **Verificado headless con el `PipelineWorker` real:
+  corrida normal → `.srt`/`.txt` (GPU), y diarización cancelada a mitad → `cancelled`
+  en 0.11 s sin salidas a medias; spawn no relanza la GUI.** `pytest` 101/101 (+9),
+  `ruff` limpio. Spec/plan: `docs/specs/2026-07-30-cancelar-inmediato.md`,
+  `docs/plans/2026-07-30-cancelar-inmediato.md`. Queda opcional el click-through en la
+  GUI real (Kike).
+  <!-- historico P12 -->
+  Origen: hoy `should_cancel` solo se consulta **entre etapas**; en la diarización las llamadas de whisperX
   (transcribe/align/diarizar) son nativas y monolíticas, así que sobre un archivo
   largo "Cancelar" queda pendiente hasta que termina la etapa en curso (verificado
   en la prueba de GUI del 2026-07-29 con un video de 84 min). **Decidido con Kike

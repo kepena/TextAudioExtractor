@@ -32,8 +32,10 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
     diarización quedó bloqueado en Windows por `k2` (torchaudio CUDA) y el combo
     viejo de whisperX es inviable (paquete yanked). Camino GPU realista si se
     retoma: **WSL2**. Detalle y opciones descartadas en **P11**.
-- **Fase 6 — Cancelar inmediato** 🔨 La GUI corre el motor en un subproceso que mata
-  al cancelar (corte ≤ ~2 s en cualquier etapa). Spec + plan aprobados (P12):
+- **Fase 6 — Cancelar inmediato** ✅ La GUI corre el motor en un subproceso que mata
+  al cancelar. Implementada y verificada (P12, 2026-07-30): diarización cancelada a
+  mitad → corte en 0.11 s, sin salidas a medias; corrida normal intacta; `spawn` no
+  relanza la GUI. `pytest` 101/101. Spec/plan:
   `docs/specs/2026-07-30-cancelar-inmediato.md`,
   `docs/plans/2026-07-30-cancelar-inmediato.md`.
 

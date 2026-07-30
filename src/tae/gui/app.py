@@ -566,6 +566,15 @@ class MainWindow(QWidget):
             self.stage_label.setText("Cancelando…")
             self._worker.cancel()
 
+    def closeEvent(self, event) -> None:  # noqa: N802
+        # Si hay una corrida activa, matar el subproceso antes de cerrar (P12):
+        # que no quede un proceso del motor trabajando en segundo plano.
+        worker = self._worker
+        if worker is not None and worker.isRunning():
+            worker.cancel()
+            worker.wait(3000)
+        event.accept()
+
     def _set_running(self, running: bool) -> None:
         has_source = self._video is not None or bool(self.url_edit.text().strip())
         self.start_btn.setEnabled(not running and has_source)
@@ -652,6 +661,17 @@ def _load_brand_fonts() -> None:
 
 
 def main() -> int:
+    # El motor corre en un subproceso (P12). En Windows el arranque es 'spawn':
+    # freeze_support() evita relanzar la GUI en el hijo y set_start_method fija
+    # 'spawn' tambien en Linux/Mac (fork + Qt/torch es problematico).
+    import multiprocessing
+
+    multiprocessing.freeze_support()
+    try:
+        multiprocessing.set_start_method("spawn")
+    except RuntimeError:
+        pass  # ya estaba fijado
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # base neutral para que el QSS mande, sin tema oscuro del SO
     _load_brand_fonts()
