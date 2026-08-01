@@ -11,7 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from . import audio as audio_mod
-from . import diarize, outputs, subtitles, transcribe
+from . import diarize, diarize_wsl, outputs, subtitles, transcribe
 from .errors import Cancelled, NoAudioTrack, SubtitleExtractionFailed
 from .ffmpeg_utils import ensure_ffmpeg
 from .models import JobOptions, JobResult, ProbeResult, Segment, TextSource
@@ -134,16 +134,31 @@ def _obtain_text(
         wav = audio_mod.extract_wav_for_whisper(options.video, Path(tmp) / "audio.wav")
         if options.diarize:
             stage("Transcribiendo e identificando hablantes...")
-            segments, language = diarize.transcribe_and_diarize(
-                wav,
-                model=options.model,
-                language=options.language,
-                num_speakers=options.num_speakers,
-                duration=info_probe.duration,
-                on_progress=on_progress,
-                on_info=info,
-                should_cancel=should_cancel,
-            )
+            use_wsl, wsl_reason = diarize_wsl.check_availability()
+            if use_wsl:
+                info("GPU vía WSL2 disponible: diarizando ahí (más rápido que CPU local).")
+                segments, language = diarize_wsl.transcribe_and_diarize_wsl(
+                    wav,
+                    model=options.model,
+                    language=options.language,
+                    num_speakers=options.num_speakers,
+                    duration=info_probe.duration,
+                    on_progress=on_progress,
+                    on_info=info,
+                    should_cancel=should_cancel,
+                )
+            else:
+                info(f"GPU vía WSL2 no disponible ({wsl_reason}); uso el camino local.")
+                segments, language = diarize.transcribe_and_diarize(
+                    wav,
+                    model=options.model,
+                    language=options.language,
+                    num_speakers=options.num_speakers,
+                    duration=info_probe.duration,
+                    on_progress=on_progress,
+                    on_info=info,
+                    should_cancel=should_cancel,
+                )
         else:
             stage("Transcribiendo...")
             segments, language = transcribe.transcribe(

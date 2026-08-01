@@ -106,6 +106,9 @@ def test_pipeline_diarize_enruta_a_diarize_no_a_transcribe(tmp_path, monkeypatch
 
     monkeypatch.setattr(pipeline_mod.diarize, "transcribe_and_diarize", fake_diarize)
     monkeypatch.setattr(pipeline_mod.transcribe, "transcribe", fake_transcribe)
+    # Fuerza el camino CPU sin importar si esta maquina tiene WSL2/GPU real
+    # configurado (P11): el objetivo de este test es el arbol de decision.
+    monkeypatch.setattr(pipeline_mod.diarize_wsl, "check_availability", lambda: (False, "test"))
 
     video = _make_video(tmp_path / "clip.mp4", with_audio=True)
     opts = JobOptions(
@@ -157,6 +160,7 @@ def test_obtain_text_diarize_ignora_subtitulos(tmp_path, monkeypatch):
     monkeypatch.setattr(
         pipeline_mod.audio_mod, "extract_wav_for_whisper", lambda src, dst: dst
     )
+    monkeypatch.setattr(pipeline_mod.diarize_wsl, "check_availability", lambda: (False, "test"))
 
     info_probe = ProbeResult(
         duration=1.0,

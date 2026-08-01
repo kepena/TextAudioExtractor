@@ -120,8 +120,10 @@ léela primero.**
   el `--extra diarize` instala torch **CPU-only**, así que la diarización corre en CPU
   aunque faster-whisper use GPU; para GPU en diarización haría falta el torch CUDA
   (pendiente menor, no bloquea). `pytest` 92/92, `ruff` limpio. Ver P11 para el torch CUDA.
-- **P11** ⛔ Torch CUDA para diarización en GPU — **intentado y revertido
-  (2026-07-29): bloqueado en Windows por `k2`.** El `--extra diarize` resuelve
+- **P11** ✅ Diarización de hablantes en GPU vía WSL2 — **implementado y
+  verificado end-to-end (2026-07-31).** Contexto original (por qué se bloqueó en
+  Windows y las opciones descartadas) abajo; resultado final después.
+  El `--extra diarize` resuelve
   `torch` a la rueda **CPU-only** (`+cpu`), así que whisperX diariza en CPU (lento,
   ~130 s para 28 s de audio) aunque la RTX 4050 la use faster-whisper. Se probó
   fijar torch/torchaudio/torchvision al índice CUDA de PyTorch (`cu128`) vía
@@ -149,13 +151,59 @@ léela primero.**
     correría en GPU sin bajar nada ni tocar paquetes yanked.
   - **Opción 3 (CPU) — estado actual.** Diarización en CPU (funciona y verificada);
     la transcripción sigue en GPU. No bloquea P10.
-  - **Próximo paso (otra sesión):** arrancar con `k-brainstorming` para acotar el
-    enfoque WSL2 antes de spec. Preguntas abiertas: ¿se mueve toda la app a WSL2 o
-    solo la diarización corre en WSL2 con la GUI en Windows?; ¿cómo invoca la GUI de
-    Windows al motor en WSL2 (comando `wsl`, servicio, etc.) y cómo se cruza con el
-    subproceso de P12?; ¿vale la pena vs. seguir en CPU? Contexto técnico ya cerrado
-    arriba (k2 sin ruedas en Windows; en Linux sí; stack actual whisperX 3.8 + torch
-    cu128).
+  - **Brainstorm (2026-07-30):** solo la diarización corre en WSL2; la GUI y el
+    resto se quedan en Windows. Camino elegido: subproceso `wsl.exe` (análogo a
+    P12 pero cruzando a WSL2), sobre "servicio persistente en WSL2" y sobre
+    quedarse en CPU. Motivo de urgencia: CPU es "no tolerable" para el uso real de
+    Kike (videos de 1-2h → hasta 8h de proceso en CPU). Spec:
+    `docs/specs/2026-07-30-diarizacion-gpu-wsl2.md`. Plan:
+    `docs/plans/2026-07-30-diarizacion-gpu-wsl2.md`.
+  - **Decisión de diseño en el plan:** la bifurcación GPU-WSL2 vs CPU vive en
+    `core` (`src/tae/core/diarize_wsl.py`, invocado desde `pipeline.py`), no en
+    `gui/` como sugería el brainstorm — así la CLI (`tae local --diarize`) también
+    se beneficia de GPU, no solo la GUI (invariante 4: motor sin depender de la
+    GUI). El worker que corre dentro de Ubuntu (`scripts/wsl_diarize_worker.py`)
+    es standalone (no importa `tae`), invocado enviando su código fuente por
+    stdin a `python -` en vez de traducir su ruta — el repo vive en `G:` (unidad
+    compartida) y WSL2 **no la automonta**, a diferencia de `C:`. Setup del venv
+    Ubuntu automatizado en `scripts/wsl_diarize_setup.sh`.
+  - **Implementado y verificado end-to-end (2026-07-31).** Bugs reales
+    encontrados y corregidos durante la verificación (ninguno era del diseño del
+    plan, todos de la mecánica real de `wsl.exe`/pip/bash):
+    1. **`wsl.exe` con `--` corrompe el comando**: reenvía el argumento a través
+       de una capa de "traducción de rutas + shell por defecto" que borra las
+       barras invertidas de rutas Windows y sustituye toda referencia `$VAR` por
+       vacío antes de llegar al shell real. Fix: usar `-e`/`--exec` en **todas**
+       las invocaciones de `wsl.exe` (bypassa esa capa).
+    2. **`shlex.quote()` desactivaba la expansión de `~`**: al citar
+       `~/.venvs/tae-diarize/bin/python`, lo envuelve en comillas simples (`~` no
+       está en su set de caracteres seguros), y las comillas simples desactivan
+       la expansión de `~` en bash → buscaba una carpeta literal `~`. Fix: helper
+       `_quote_wsl_arg` que deja el `~` inicial sin comillas.
+    3. **`torch` sin fijar versión duplicaba la descarga** (~900MB extra): el
+       script de setup instalaba `torch` sin pin (resolvía a 2.11.0), pero
+       whisperX 3.8 exige `torch~=2.8.0` — al instalar whisperX después, pip veía
+       que no cumplía el pin y bajaba OTRO torch completo del índice normal. Fix:
+       fijar `torch~=2.8.0 torchaudio~=2.8.0 torchvision~=0.23.0` en el mismo
+       comando/índice CUDA que whisperX espera.
+    4. **`HF_TOKEN` en `~/.bashrc` no se ve en shells no interactivos**: el
+       `.bashrc` estándar de Ubuntu corta la ejecución con una guardia
+       `case $- in *i*) ;; *) return;; esac` si no es interactivo — exactamente
+       como `bash -lc` invoca WSL2 desde la app. Fix: el token va en
+       `~/.profile`, no en `.bashrc` (ya corregido en `wsl_diarize_setup.sh`).
+    5. **`ffmpeg` no instalado dentro de Ubuntu**: `whisperx.load_audio()` lo
+       necesita (binario de sistema aparte del venv, invariante 5) y no estaba
+       documentado. Fix: agregado a `wsl_diarize_setup.sh` y a
+       `check_availability()` (si falta, degrada a CPU en vez de fallar duro).
+    6. **Timeout de disponibilidad insuficiente** (8s): `import torch` con CUDA
+       tarda más la primera vez. Subido a 30s (el chequeo corre una vez por job,
+       no por tick de progreso).
+    Verificación real: `tae local Adolescentes.mp4 --diarize` (190s, GPU vía
+    WSL2) → 7 hablantes (`SPEAKER_00`..`06`) coherentes, corrida completa en
+    8m9s (primera vez, incluye descarga de pesos). Cancelar a mitad: corte limpio
+    en 6.5s, sin procesos huérfanos dentro de WSL2 (confirmado con `ps aux`).
+    `pytest` 115/115, `ruff` limpio. Limpieza: se liberaron 4.3GB de caché de pip
+    acumulada por los intentos de setup fallidos.
 - **P12** ✅ Cancelar inmediato (implementado y verificado 2026-07-30). La GUI corre
   el motor en un subproceso (`src/tae/gui/engine_process.py`, target `run_engine`) y
   el `QThread` pasó a ser un puente `_EngineBridge` que lee una cola y re-emite las

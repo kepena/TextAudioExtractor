@@ -1,7 +1,7 @@
 # Roadmap — TextAudioExtractor
 
 Creado: 2026-07-26
-Actualizado: 2026-07-29 (diarización de hablantes verificada end-to-end; GPU pendiente)
+Actualizado: 2026-07-31 (diarización de hablantes en GPU vía WSL2 verificada end-to-end)
 
 ## Visión
 
@@ -28,10 +28,18 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
   whisperx como extra opcional + token HF de setup. Implementada por bloques A→F
   (`docs/plans/2026-07-28-diarizacion-progreso.md`) y verificada end-to-end el
   2026-07-29 (audio de 2 voces → 2 hablantes coherentes). Ver P10.
-  - **Diarización corre en CPU** (la transcripción sigue en GPU). GPU para la
-    diarización quedó bloqueado en Windows por `k2` (torchaudio CUDA) y el combo
-    viejo de whisperX es inviable (paquete yanked). Camino GPU realista si se
-    retoma: **WSL2**. Detalle y opciones descartadas en **P11**.
+  - **GPU vía WSL2** ✅ (P11, 2026-07-31): `core/diarize_wsl.py` detecta si WSL2 +
+    venv de diarización + GPU están listos y, si sí, cruza a un subproceso
+    `wsl.exe` (Ubuntu, whisperX 3.8 + torch cu128 — ahí `k2` sí tiene ruedas, a
+    diferencia de Windows) en vez de diarizar en CPU. Si algo falta, degrada solo
+    a CPU sin bloquear. Verificado con video real de 7 hablantes: coherente,
+    ~8 min primera corrida (con descarga de pesos); cancelar corta en ~6.5s sin
+    procesos huérfanos en WSL2. Setup: `scripts/wsl_diarize_setup.sh`. Spec/plan:
+    `docs/specs/2026-07-30-diarizacion-gpu-wsl2.md`,
+    `docs/plans/2026-07-30-diarizacion-gpu-wsl2.md`.
+  - **CPU sigue como fallback automático** cuando WSL2/GPU no están disponibles
+    (la transcripción sigue en GPU aparte). Detalle completo, bugs reales
+    encontrados (wsl.exe, pip, bash) y opciones descartadas en **P11**.
 - **Fase 6 — Cancelar inmediato** ✅ La GUI corre el motor en un subproceso que mata
   al cancelar. Implementada y verificada (P12, 2026-07-30): diarización cancelada a
   mitad → corte en 0.11 s, sin salidas a medias; corrida normal intacta; `spawn` no
