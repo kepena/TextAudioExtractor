@@ -1,7 +1,7 @@
 # Roadmap — TextAudioExtractor
 
 Creado: 2026-07-26
-Actualizado: 2026-07-31 (diarización de hablantes en GPU vía WSL2 verificada end-to-end)
+Actualizado: 2026-08-01 (empaquetado en carpeta portable de Windows, build verificado)
 
 ## Visión
 
@@ -46,6 +46,16 @@ Interno ahora, con arquitectura pensada para escalar a producto/servicio.
   relanza la GUI. `pytest` 101/101. Spec/plan:
   `docs/specs/2026-07-30-cancelar-inmediato.md`,
   `docs/plans/2026-07-30-cancelar-inmediato.md`.
+- **Fase 7 — Empaquetado en carpeta portable de Windows** ✅ código y build
+  verificados (2026-08-01); falta solo la validación manual real de Kike
+  (transcripción/diarización/YouTube/cancelar desde el `.exe`). PyInstaller
+  `--onedir` (`packaging/tae-gui.spec`), `ffmpeg`/`ffprobe`/`yt-dlp` y whisperx
+  (diarización CPU fallback) bundleados, script de build reproducible
+  (`packaging/build_windows.ps1`) con smoke test automático. En el camino se
+  encontró y corrigió que el venv de este repo no puede vivir en `G:` (unidad de
+  red) — ver P13. `pytest` 115/115, `ruff` limpio. Spec/plan:
+  `docs/specs/2026-08-01-empaquetado-windows-portable.md`,
+  `docs/plans/2026-08-01-empaquetado-windows-portable.md`.
 
 ## Decisiones tomadas (brainstorm 2026-07-26)
 

@@ -33,6 +33,7 @@ import queue
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 from collections.abc import Callable
@@ -52,8 +53,21 @@ _WSLPATH_TIMEOUT = 10.0
 _POLL_INTERVAL = 0.2
 _KILL_TIMEOUT = 5.0
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_WORKER_SCRIPT = _REPO_ROOT / "scripts" / "wsl_diarize_worker.py"
+def _worker_script_path() -> Path:
+    """Ruta a scripts/wsl_diarize_worker.py.
+
+    En un build congelado (PyInstaller, ver packaging/) el arbol de fuente del
+    repo no existe: el script de build copia wsl_diarize_worker.py junto al
+    ejecutable, y es ahi donde hay que buscarlo. En modo dev sigue subiendo
+    desde este archivo hasta la raiz del repo, como antes.
+    """
+    if getattr(sys, "frozen", False):
+        base = Path(getattr(sys, "_MEIPASS", None) or Path(sys.executable).parent)
+        return base / "wsl_diarize_worker.py"
+    return Path(__file__).resolve().parents[3] / "scripts" / "wsl_diarize_worker.py"
+
+
+_WORKER_SCRIPT = _worker_script_path()
 
 
 def _distro_name() -> str:

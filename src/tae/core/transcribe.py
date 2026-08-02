@@ -19,9 +19,20 @@ _dll_dirs_added = False
 
 
 def _add_cuda_dll_dirs() -> None:
-    """En Windows, registra las carpetas de DLLs CUDA de los paquetes pip."""
+    """En Windows, registra las carpetas de DLLs CUDA de los paquetes pip.
+
+    En un build congelado (PyInstaller, ver packaging/) no hay site-packages
+    real: las DLL de cublas/cudnn las copia el script de build a una carpeta
+    'cuda_dlls' junto al ejecutable, y es ahi donde hay que buscarlas.
+    """
     global _dll_dirs_added
     if _dll_dirs_added or sys.platform != "win32":
+        return
+    if getattr(sys, "frozen", False):
+        bundled = _frozen_cuda_dll_dir()
+        if bundled.is_dir():
+            os.add_dll_directory(str(bundled))
+        _dll_dirs_added = True
         return
     try:
         import nvidia  # noqa: F401
@@ -33,6 +44,12 @@ def _add_cuda_dll_dirs() -> None:
             if base.is_dir():
                 os.add_dll_directory(str(base))
     _dll_dirs_added = True
+
+
+def _frozen_cuda_dll_dir() -> Path:
+    """Carpeta con las DLL de CUDA bundleadas por packaging/build_windows.ps1."""
+    base = Path(getattr(sys, "_MEIPASS", None) or Path(sys.executable).parent)
+    return base / "cuda_dlls"
 
 
 def _site_nvidia_bins(pkg: str):

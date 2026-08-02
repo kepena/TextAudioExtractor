@@ -231,3 +231,19 @@ léela primero.**
   `docs/plans/2026-07-30-cancelar-inmediato.md` (módulo `gui/engine_process.py` +
   puente `_EngineBridge` en `worker.py` + `freeze_support`/`closeEvent`). Falta
   implementar y verificar.
+- **P13** ✅ Venv de este repo movido a disco local, fuera de `G:` (2026-08-01,
+  durante el empaquetado en carpeta portable). Hallazgo: instalar el extra
+  `diarize` completo (torch/whisperx/pyannote, miles de archivos chicos) en un
+  `.venv` dentro de `G:\Unidades compartidas\...` (Google Shared Drive montado
+  como unidad de red) revienta a mitad de instalación con **Windows error 1450
+  "Recursos insuficientes en el sistema"** — reproducido en la práctica.
+  Causa raíz relacionada: se descubrió que `UV_PROJECT_ENVIRONMENT` estaba
+  fijada como variable de entorno **global de Usuario de Windows**, apuntando
+  al venv de otro proyecto Kaiketek (`UnidadSO`, automatización de Gmail/Sheets)
+  — así que este repo corría por accidente sobre el venv de UnidadSO, y un
+  `uv sync --dev` de este repo le borró paquetes reales a UnidadSO. Se
+  restauró UnidadSO desde su propia carpeta (su `.bat` ya fija su venv
+  localmente, sin cambios). Fix para este repo: venv dedicado en disco local
+  `C:\Users\kepen\.venvs\tae\`, fijado por variable de entorno **inline** (no
+  global) — mismo patrón que ya usaba UnidadSO. Ver memoria `entorno-venv-uv`.
+  `packaging/build_windows.ps1` ya lo fija internamente, sin pasos manuales.

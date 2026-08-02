@@ -191,6 +191,9 @@ QProgressBar::chunk {{
 class DropFrame(QFrame):
     """Zona para arrastrar un video."""
 
+    _HINT_INICIAL = "Arrastra un video aqui  ·  o usa 'Elegir archivo'"
+    _HINT_CARGADO = "Arrastra otro video aqui para reemplazarlo"
+
     def __init__(self, on_file) -> None:
         super().__init__()
         self._on_file = on_file
@@ -202,9 +205,18 @@ class DropFrame(QFrame):
             f"background: {GRIS_CLARO}; }}"
         )
         layout = QVBoxLayout(self)
-        self.label = QLabel("Arrastra un video aqui  ·  o usa 'Elegir archivo'")
+        self.label = QLabel(self._HINT_INICIAL)
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
+
+    def mark_loaded(self) -> None:
+        """Ya hay un video cargado: el recuadro grande de bienvenida ya no aplica.
+
+        Se achica y cambia el texto (sigue aceptando drop para reemplazar el
+        video) en vez de seguir ocupando el mismo alto sin cumplir su funcion.
+        """
+        self.setMinimumHeight(36)
+        self.label.setText(self._HINT_CARGADO)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
         if event.mimeData().hasUrls():
@@ -259,21 +271,51 @@ class MainWindow(QWidget):
         title_col.addWidget(subheader)
         title_row.addLayout(title_col)
         title_row.addStretch()
+
+        # "Powered by" arriba, junto al titulo (antes iba en el pie de la ventana).
+        # "Powered by" en su propia linea, encima del logo+wordmark, para que el
+        # bloque quede mas compacto (angosto) en vez de una sola fila larga.
+        powered_col = QVBoxLayout()
+        powered_col.setSpacing(2)
+        powered = QLabel("Powered by")
+        powered.setObjectName("poweredBy")
+        powered.setAlignment(Qt.AlignRight)
+        powered_col.addWidget(powered)
+        brand_row = QHBoxLayout()
+        brand_row.setSpacing(6)
+        brand_row.addStretch()
+        tree_lbl = QLabel()
+        tree_lbl.setPixmap(QIcon(LOGO).pixmap(20, 20))
+        brand_row.addWidget(tree_lbl)
+        km = QLabel(WORDMARK)
+        km.setObjectName("wordmarkFooter")
+        km.setTextFormat(Qt.RichText)
+        brand_row.addWidget(km)
+        powered_col.addLayout(brand_row)
+        # Sin esto, el HBoxLayout estira powered_col a todo el alto de la fila
+        # (que manda title_col, mas alto) y el espacio sobrante queda METIDO
+        # entre "Powered by" y el logo — alinear arriba lo evita.
+        title_row.addLayout(powered_col)
+        title_row.setAlignment(powered_col, Qt.AlignTop)
         root.addLayout(title_row)
 
+        # Cargar video: el recuadro de arrastrar a la izquierda (mitad de ancho) y
+        # el boton + el estado del video apilados a la derecha, para ahorrar alto.
+        load_row = QHBoxLayout()
+        load_row.setSpacing(16)
         self.drop = DropFrame(self._load_video)
-        root.addWidget(self.drop)
-
-        pick_row = QHBoxLayout()
+        load_row.addWidget(self.drop, 1)
+        load_col = QVBoxLayout()
+        load_col.setSpacing(8)
         self.pick_btn = QPushButton("Elegir archivo…")
         self.pick_btn.clicked.connect(self._pick_file)
-        pick_row.addWidget(self.pick_btn)
-        pick_row.addStretch()
-        root.addLayout(pick_row)
-
+        load_col.addWidget(self.pick_btn)
         self.info_label = QLabel("Ningun video cargado.")
         self.info_label.setWordWrap(True)
-        root.addWidget(self.info_label)
+        load_col.addWidget(self.info_label)
+        load_col.addStretch()
+        load_row.addLayout(load_col, 1)
+        root.addLayout(load_row)
 
         # Online (URL de YouTube/plataformas)
         url_box = QGroupBox("O pega una URL (YouTube/online)")
@@ -323,25 +365,25 @@ class MainWindow(QWidget):
         tr_box = QGroupBox("Transcripcion (cuando no hay subtitulos)")
         grid = QGridLayout(tr_box)
         self.cb_force = QCheckBox("Transcribir de todos modos (ignorar subtitulos incrustados)")
-        grid.addWidget(self.cb_force, 0, 0, 1, 2)
+        grid.addWidget(self.cb_force, 0, 0, 1, 4)
         grid.addWidget(QLabel("Idioma:"), 1, 0)
         self.cmb_lang = QComboBox()
         for label, _code in LANGUAGES:
             self.cmb_lang.addItem(label)
         grid.addWidget(self.cmb_lang, 1, 1)
-        grid.addWidget(QLabel("Modelo:"), 2, 0)
+        grid.addWidget(QLabel("Modelo:"), 1, 2)
         self.cmb_model = QComboBox()
         self.cmb_model.addItems(MODELS)
         self.cmb_model.setCurrentText("medium")
-        grid.addWidget(self.cmb_model, 2, 1)
+        grid.addWidget(self.cmb_model, 1, 3)
         self.cb_diarize = QCheckBox("Identificar hablantes (transcribe el audio)")
         self.cb_diarize.setToolTip(
             "Separa quien habla y prefija cada intervencion con SPEAKER_00, "
             "SPEAKER_01... Fuerza transcribir el audio (ignora subtitulos). "
             "Necesita el extra whisperx y un token de HuggingFace; sin GPU es lento."
         )
-        grid.addWidget(self.cb_diarize, 3, 0, 1, 2)
-        grid.addWidget(QLabel("Nº de hablantes:"), 4, 0)
+        grid.addWidget(self.cb_diarize, 2, 0, 1, 4)
+        grid.addWidget(QLabel("Nº de hablantes:"), 3, 0)
         self.spin_speakers = QSpinBox()
         self.spin_speakers.setRange(0, 20)
         self.spin_speakers.setValue(0)
@@ -349,7 +391,7 @@ class MainWindow(QWidget):
         self.spin_speakers.setToolTip(
             "Dejalo en 'Automatico' o fija el numero si lo sabes (ej. 2 en una terapia)."
         )
-        grid.addWidget(self.spin_speakers, 4, 1)
+        grid.addWidget(self.spin_speakers, 3, 1)
         root.addWidget(tr_box)
 
         # Carpeta de salida
@@ -388,24 +430,6 @@ class MainWindow(QWidget):
         actions.addStretch()
         actions.addWidget(self.open_btn)
         root.addLayout(actions)
-
-        # Footer "Powered by" — arbolito + KAIKETEK pequeño (marca en segundo plano)
-        footer = QHBoxLayout()
-        footer.setSpacing(6)
-        footer.addStretch()
-        powered = QLabel("Powered by")
-        powered.setObjectName("poweredBy")
-        footer.addWidget(powered)
-        tree_lbl = QLabel()
-        tree_lbl.setPixmap(QIcon(LOGO).pixmap(20, 20))
-        footer.addWidget(tree_lbl)
-        km = QLabel(WORDMARK)
-        km.setObjectName("wordmarkFooter")
-        km.setTextFormat(Qt.RichText)
-        footer.addWidget(km)
-        footer.addStretch()
-        root.addSpacing(4)
-        root.addLayout(footer)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -456,6 +480,7 @@ class MainWindow(QWidget):
             f"<b>{path.name}</b><br>Duracion: {mins}:{secs:02d}  ·  "
             f"Subtitulos incrustados: {subs}  ·  Audio: {audio}"
         )
+        self.drop.mark_loaded()
         default_out = path.parent / path.stem
         self.out_edit.setText(str(default_out))
         self.open_btn.setEnabled(False)
@@ -671,6 +696,14 @@ def main() -> int:
         multiprocessing.set_start_method("spawn")
     except RuntimeError:
         pass  # ya estaba fijado
+
+    if getattr(sys, "frozen", False):
+        # Empaquetado (PyInstaller --onedir): ffmpeg.exe/yt-dlp.exe bundleados
+        # viven junto al .exe. Antepone esa carpeta al PATH para que
+        # find_ffmpeg()/find_ytdlp() (shutil.which, sin cambios) los detecten.
+        # El subproceso del motor (multiprocessing.Process) hereda este PATH.
+        exe_dir = str(Path(sys.executable).parent)
+        os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # base neutral para que el QSS mande, sin tema oscuro del SO
