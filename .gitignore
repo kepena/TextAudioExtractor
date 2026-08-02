@@ -37,3 +37,9 @@ Thumbs.db
 .DS_Store
 .idea/
 .vscode/
+
+# Empaquetado Windows (packaging/): binarios de terceros descargados y build
+# de PyInstaller, no se versionan (ver packaging/README.md para re-obtenerlos)
+/build/
+/dist/
+packaging/bin/
